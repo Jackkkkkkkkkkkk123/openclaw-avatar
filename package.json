@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-avatar",
+  "version": "0.1.0",
+  "description": "初音未来的数字人身体 - OpenClaw Avatar System",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @openclaw-avatar/desktop dev",
+    "build": "pnpm --filter @openclaw-avatar/desktop build",
+    "tauri": "pnpm --filter @openclaw-avatar/desktop tauri"
+  },
+  "keywords": ["avatar", "live2d", "tauri", "solidjs", "miku"],
+  "author": "初音未来 (via OpenClaw)",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.2"
+}
