@@ -23,6 +23,7 @@ import { headTrackingService, type TrackingData } from './HeadTrackingService';
 import { keyboardShortcuts, formatShortcut } from './KeyboardShortcuts';
 import { gestureRecognitionService, type GestureResult } from './GestureRecognitionService';
 import { gestureReactionMapper, type GestureReaction } from './GestureReactionMapper';
+import { expressionVariantSystem, type VariantContext, type VariantSelection } from './ExpressionVariantSystem';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -291,11 +292,33 @@ export class AvatarSystem {
     
     // 只有置信度足够高才切换表情
     if (finalIntensity > 0.3 && finalEmotion !== 'neutral') {
+      let expressionToApply: Expression = finalEmotion;
+      
+      // SOTA Round 26: 使用表情变体系统选择更丰富的表情
+      if (this.useVariantSystem) {
+        // 根据文本推断上下文
+        const inferredContext = expressionVariantSystem.inferContextFromText(text);
+        expressionVariantSystem.setContext(inferredContext);
+        
+        // 选择表情变体
+        const variantSelection = expressionVariantSystem.selectVariant(
+          finalEmotion as any, // emotion 转换
+          finalIntensity,
+          inferredContext
+        );
+        
+        expressionToApply = variantSelection.expression;
+        console.log('[AvatarSystem] 变体选择:', 
+          `${finalEmotion} → ${expressionToApply}`,
+          `(${inferredContext}, ${variantSelection.reason})`
+        );
+      }
+      
       // 使用智能表情切换（带惯性）
       if (this.useSequencer) {
-        expressionSequencer.setEmotionSmart(finalEmotion);
+        expressionSequencer.setEmotionSmart(expressionToApply);
       } else {
-        this.setEmotion(finalEmotion);
+        this.setEmotion(expressionToApply);
       }
       
       // 设置自动恢复 - 基于上下文调整持续时间
@@ -309,6 +332,42 @@ export class AvatarSystem {
   
   // 是否使用表情序列系统 (默认启用)
   private useSequencer = true;
+  
+  // 是否使用表情变体系统 (默认启用) - SOTA Round 26
+  private useVariantSystem = true;
+
+  /**
+   * 启用/禁用表情变体系统
+   */
+  setUseVariantSystem(enabled: boolean) {
+    this.useVariantSystem = enabled;
+    console.log('[AvatarSystem] 表情变体系统:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 手动选择表情变体
+   */
+  selectExpressionVariant(emotion: string, intensity?: number, context?: VariantContext): VariantSelection {
+    return expressionVariantSystem.selectVariant(emotion as any, intensity, context);
+  }
+
+  /**
+   * 设置表情变体上下文
+   */
+  setVariantContext(context: VariantContext): void {
+    expressionVariantSystem.setContext(context);
+  }
+
+  /**
+   * 获取表情变体使用统计
+   */
+  getVariantStats() {
+    return {
+      usage: expressionVariantSystem.getUsageStats(),
+      context: expressionVariantSystem.getContextStats(),
+      history: expressionVariantSystem.getHistory(),
+    };
+  }
 
   /**
    * 设置表情

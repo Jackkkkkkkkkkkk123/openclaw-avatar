@@ -440,16 +440,17 @@ export class ExpressionVariantSystem {
   inferContextFromText(text: string): VariantContext {
     const lowerText = text.toLowerCase();
     
-    if (this.containsAny(lowerText, ['你好', '嗨', 'hello', 'hi', '早上好', '晚上好'])) {
+    // 问题检测优先于问候 (因为 "what" 可能出现在问候中)
+    if (this.containsAny(lowerText, ['?', '？', '为什么', '怎么', '什么是', 'why', 'how come', 'what is'])) {
+      return 'question';
+    }
+    
+    if (this.containsAny(lowerText, ['你好', '嗨', 'hello', 'hi ', '早上好', '晚上好'])) {
       return 'greeting';
     }
     
     if (this.containsAny(lowerText, ['再见', '拜拜', 'bye', 'goodbye', '晚安', '下次见'])) {
       return 'farewell';
-    }
-    
-    if (this.containsAny(lowerText, ['?', '？', '为什么', '怎么', '什么', 'why', 'how', 'what'])) {
-      return 'question';
     }
     
     if (this.containsAny(lowerText, ['恭喜', '太棒了', '成功', 'congratulations', 'celebrate', '庆祝'])) {
