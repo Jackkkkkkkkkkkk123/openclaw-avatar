@@ -3,13 +3,60 @@
  * 
  * 这是初音未来的灵魂控制器
  * 
- * v2.0 - SOTA 优化版
+ * v3.0 - SOTA 生命动画版
  * - 扩展表情系统 (4 → 24 种表情)
  * - 表情混合/过渡动画
  * - 自动衰减系统
+ * - ✨ 自动眨眼系统 (随机间隔，自然眨眼)
+ * - ✨ 呼吸动画 (轻微身体起伏)
+ * - ✨ 待机微动作 (轻微摇摆)
  */
 
 import type { Live2DModel } from 'pixi-live2d-display';
+
+// ========== 生命动画配置 ==========
+interface LifeAnimationConfig {
+  // 眨眼配置
+  blink: {
+    enabled: boolean;
+    minInterval: number;   // 最小眨眼间隔 (ms)
+    maxInterval: number;   // 最大眨眼间隔 (ms)
+    duration: number;      // 眨眼持续时间 (ms)
+    doubleBlinkChance: number;  // 连续眨眼概率 0-1
+  };
+  // 呼吸配置
+  breath: {
+    enabled: boolean;
+    cycle: number;         // 呼吸周期 (ms)
+    amplitude: number;     // 幅度 0-1
+  };
+  // 待机微动作配置
+  idle: {
+    enabled: boolean;
+    swayAmplitude: number; // 摇摆幅度
+    swayCycle: number;     // 摇摆周期 (ms)
+  };
+}
+
+const DEFAULT_LIFE_CONFIG: LifeAnimationConfig = {
+  blink: {
+    enabled: true,
+    minInterval: 2000,
+    maxInterval: 6000,
+    duration: 150,
+    doubleBlinkChance: 0.2,
+  },
+  breath: {
+    enabled: true,
+    cycle: 3500,
+    amplitude: 0.03,
+  },
+  idle: {
+    enabled: true,
+    swayAmplitude: 0.02,
+    swayCycle: 5000,
+  },
+};
 
 // 扩展表情类型 (从4个扩展到24个)
 export type Expression = 
@@ -214,6 +261,22 @@ export class AvatarController {
   // 动画帧
   private animationFrameId: number | null = null;
 
+  // ========== 生命动画系统 ==========
+  private lifeConfig: LifeAnimationConfig = { ...DEFAULT_LIFE_CONFIG };
+  private lifeAnimationEnabled = true;
+  
+  // 眨眼状态
+  private blinkTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isBlinking = false;
+  private blinkPhase: 'closing' | 'opening' | 'none' = 'none';
+  private blinkStartTime = 0;
+  private originalEyeOpenL = 1;
+  private originalEyeOpenR = 1;
+  
+  // 呼吸/待机动画状态
+  private breathStartTime = 0;
+  private idleStartTime = 0;
+
   /**
    * 绑定 Live2D 模型
    */
@@ -279,13 +342,231 @@ export class AvatarController {
    * 启动混合动画循环
    */
   private startAnimationLoop() {
+    this.breathStartTime = Date.now();
+    this.idleStartTime = Date.now();
+    
     const animate = () => {
+      const now = Date.now();
+      
+      // 表情过渡
       if (this.isTransitioning) {
         this.updateBlendTransition();
       }
+      
+      // 生命动画
+      if (this.lifeAnimationEnabled) {
+        this.updateLifeAnimations(now);
+      }
+      
       this.animationFrameId = requestAnimationFrame(animate);
     };
     this.animationFrameId = requestAnimationFrame(animate);
+    
+    // 启动眨眼计时器
+    this.scheduleNextBlink();
+  }
+
+  /**
+   * 更新生命动画（眨眼、呼吸、待机）
+   */
+  private updateLifeAnimations(now: number) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    
+    // ===== 眨眼动画 =====
+    if (this.lifeConfig.blink.enabled && this.blinkPhase !== 'none') {
+      this.updateBlink(now);
+    }
+    
+    // ===== 呼吸动画 =====
+    if (this.lifeConfig.breath.enabled) {
+      const breathElapsed = now - this.breathStartTime;
+      const breathProgress = (breathElapsed % this.lifeConfig.breath.cycle) / this.lifeConfig.breath.cycle;
+      // 使用正弦波实现平滑呼吸
+      const breathValue = Math.sin(breathProgress * Math.PI * 2) * this.lifeConfig.breath.amplitude;
+      
+      this.applyBreath(coreModel, breathValue);
+    }
+    
+    // ===== 待机微动作 =====
+    if (this.lifeConfig.idle.enabled) {
+      const idleElapsed = now - this.idleStartTime;
+      const idleProgress = (idleElapsed % this.lifeConfig.idle.swayCycle) / this.lifeConfig.idle.swayCycle;
+      // 使用正弦波实现轻微摇摆
+      const swayValue = Math.sin(idleProgress * Math.PI * 2) * this.lifeConfig.idle.swayAmplitude;
+      
+      this.applyIdleSway(coreModel, swayValue);
+    }
+  }
+
+  /**
+   * 计划下一次眨眼
+   */
+  private scheduleNextBlink() {
+    if (!this.lifeConfig.blink.enabled || !this.lifeAnimationEnabled) return;
+    
+    // 随机间隔
+    const interval = this.lifeConfig.blink.minInterval + 
+      Math.random() * (this.lifeConfig.blink.maxInterval - this.lifeConfig.blink.minInterval);
+    
+    this.blinkTimeout = setTimeout(() => {
+      this.startBlink();
+    }, interval);
+  }
+
+  /**
+   * 开始眨眼
+   */
+  private startBlink() {
+    if (this.isBlinking || !this.model) return;
+    
+    this.isBlinking = true;
+    this.blinkPhase = 'closing';
+    this.blinkStartTime = Date.now();
+    
+    // 保存当前眼睛状态
+    this.originalEyeOpenL = this.currentBlend.eyeOpenL ?? 1;
+    this.originalEyeOpenR = this.currentBlend.eyeOpenR ?? 1;
+  }
+
+  /**
+   * 更新眨眼动画
+   */
+  private updateBlink(now: number) {
+    const elapsed = now - this.blinkStartTime;
+    const halfDuration = this.lifeConfig.blink.duration / 2;
+    
+    if (this.blinkPhase === 'closing') {
+      // 闭眼阶段
+      const progress = Math.min(1, elapsed / halfDuration);
+      const easedProgress = this.applyEasing(progress, 'easeIn');
+      
+      this.applyEyeOpen(1 - easedProgress);
+      
+      if (progress >= 1) {
+        this.blinkPhase = 'opening';
+        this.blinkStartTime = now;
+      }
+    } else if (this.blinkPhase === 'opening') {
+      // 睁眼阶段
+      const progress = Math.min(1, elapsed / halfDuration);
+      const easedProgress = this.applyEasing(progress, 'easeOut');
+      
+      this.applyEyeOpen(easedProgress);
+      
+      if (progress >= 1) {
+        this.blinkPhase = 'none';
+        this.isBlinking = false;
+        
+        // 有概率连续眨眼
+        if (Math.random() < this.lifeConfig.blink.doubleBlinkChance) {
+          setTimeout(() => this.startBlink(), 100);
+        } else {
+          this.scheduleNextBlink();
+        }
+      }
+    }
+  }
+
+  /**
+   * 应用眼睛张开程度
+   */
+  private applyEyeOpen(openAmount: number) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    const finalL = this.originalEyeOpenL * openAmount;
+    const finalR = this.originalEyeOpenR * openAmount;
+    
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (model?.parameters) {
+          const paramNames = ['ParamEyeLOpen', 'PARAM_EYE_L_OPEN', 'ParamEyeOpen_L'];
+          const paramNamesR = ['ParamEyeROpen', 'PARAM_EYE_R_OPEN', 'ParamEyeOpen_R'];
+          
+          for (const paramName of paramNames) {
+            const idx = model.parameters.ids?.indexOf(paramName);
+            if (idx >= 0) {
+              model.parameters.values[idx] = finalL;
+              break;
+            }
+          }
+          for (const paramName of paramNamesR) {
+            const idx = model.parameters.ids?.indexOf(paramName);
+            if (idx >= 0) {
+              model.parameters.values[idx] = finalR;
+              break;
+            }
+          }
+        }
+      } else {
+        if (coreModel?.setParamFloat) {
+          coreModel.setParamFloat('PARAM_EYE_L_OPEN', finalL);
+          coreModel.setParamFloat('PARAM_EYE_R_OPEN', finalR);
+        }
+      }
+    } catch {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 应用呼吸动画
+   */
+  private applyBreath(coreModel: any, breathValue: number) {
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (model?.parameters) {
+          // 呼吸影响身体 Y 轴位置
+          const paramNames = ['ParamBreath', 'PARAM_BREATH', 'ParamBodyAngleY', 'PARAM_BODY_ANGLE_Y'];
+          for (const paramName of paramNames) {
+            const idx = model.parameters.ids?.indexOf(paramName);
+            if (idx >= 0) {
+              model.parameters.values[idx] = breathValue * 10; // 放大效果
+              break;
+            }
+          }
+        }
+      } else {
+        if (coreModel?.setParamFloat) {
+          coreModel.setParamFloat('PARAM_BREATH', breathValue * 10);
+        }
+      }
+    } catch {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 应用待机摇摆
+   */
+  private applyIdleSway(coreModel: any, swayValue: number) {
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (model?.parameters) {
+          // 轻微的身体角度摇摆
+          const paramNames = ['ParamBodyAngleX', 'PARAM_BODY_ANGLE_X', 'ParamAngleX', 'PARAM_ANGLE_X'];
+          for (const paramName of paramNames) {
+            const idx = model.parameters.ids?.indexOf(paramName);
+            if (idx >= 0) {
+              // 叠加到现有值而不是替换
+              model.parameters.values[idx] += swayValue * 5;
+              break;
+            }
+          }
+        }
+      } else {
+        if (coreModel?.setParamFloat) {
+          coreModel.setParamFloat('PARAM_BODY_ANGLE_X', swayValue * 5);
+        }
+      }
+    } catch {
+      // 静默处理
+    }
   }
 
   /**
@@ -725,6 +1006,103 @@ export class AvatarController {
     return { ...this.currentBlend };
   }
 
+  // ========== 生命动画控制 API ==========
+
+  /**
+   * 启用/禁用生命动画
+   */
+  setLifeAnimationEnabled(enabled: boolean) {
+    this.lifeAnimationEnabled = enabled;
+    
+    if (enabled) {
+      this.breathStartTime = Date.now();
+      this.idleStartTime = Date.now();
+      this.scheduleNextBlink();
+    } else {
+      // 停止眨眼计时器
+      if (this.blinkTimeout) {
+        clearTimeout(this.blinkTimeout);
+        this.blinkTimeout = null;
+      }
+      this.blinkPhase = 'none';
+      this.isBlinking = false;
+    }
+    
+    console.log('[AvatarController] 生命动画:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 获取生命动画状态
+   */
+  isLifeAnimationEnabled(): boolean {
+    return this.lifeAnimationEnabled;
+  }
+
+  /**
+   * 配置生命动画参数
+   */
+  setLifeConfig(config: Partial<LifeAnimationConfig>) {
+    if (config.blink) {
+      this.lifeConfig.blink = { ...this.lifeConfig.blink, ...config.blink };
+    }
+    if (config.breath) {
+      this.lifeConfig.breath = { ...this.lifeConfig.breath, ...config.breath };
+    }
+    if (config.idle) {
+      this.lifeConfig.idle = { ...this.lifeConfig.idle, ...config.idle };
+    }
+    console.log('[AvatarController] 生命动画配置更新:', this.lifeConfig);
+  }
+
+  /**
+   * 获取生命动画配置
+   */
+  getLifeConfig(): LifeAnimationConfig {
+    return { ...this.lifeConfig };
+  }
+
+  /**
+   * 强制触发一次眨眼
+   */
+  triggerBlink() {
+    if (!this.isBlinking) {
+      this.startBlink();
+    }
+  }
+
+  /**
+   * 单独控制眨眼
+   */
+  setBlinkEnabled(enabled: boolean) {
+    this.lifeConfig.blink.enabled = enabled;
+    if (enabled && !this.blinkTimeout) {
+      this.scheduleNextBlink();
+    } else if (!enabled && this.blinkTimeout) {
+      clearTimeout(this.blinkTimeout);
+      this.blinkTimeout = null;
+    }
+  }
+
+  /**
+   * 单独控制呼吸
+   */
+  setBreathEnabled(enabled: boolean) {
+    this.lifeConfig.breath.enabled = enabled;
+    if (enabled) {
+      this.breathStartTime = Date.now();
+    }
+  }
+
+  /**
+   * 单独控制待机微动作
+   */
+  setIdleSwayEnabled(enabled: boolean) {
+    this.lifeConfig.idle.enabled = enabled;
+    if (enabled) {
+      this.idleStartTime = Date.now();
+    }
+  }
+
   /**
    * 销毁
    */
@@ -735,16 +1113,24 @@ export class AvatarController {
       this.animationFrameId = null;
     }
     
-    // 清除计时器
+    // 清除表情衰减计时器
     if (this.expressionTimeout) {
       clearTimeout(this.expressionTimeout);
       this.expressionTimeout = null;
+    }
+    
+    // 清除眨眼计时器
+    if (this.blinkTimeout) {
+      clearTimeout(this.blinkTimeout);
+      this.blinkTimeout = null;
     }
     
     this.model = null;
     this.availableExpressions = [];
     this.availableMotions = [];
     this.isTransitioning = false;
+    this.blinkPhase = 'none';
+    this.isBlinking = false;
   }
 }
 
