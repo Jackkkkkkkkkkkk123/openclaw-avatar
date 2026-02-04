@@ -12,6 +12,7 @@
 
 import { avatarController, type Expression } from './AvatarController';
 import { OpenClawConnector, type ConnectionStatus, type MessageChunk } from './OpenClawConnector';
+import { OpenClawBridgeConnector } from './OpenClawBridgeConnector';
 import { detectEmotion, getEmotionDuration } from './EmotionDetector';
 import { TTSService, createTTSService, type TTSResult } from './TTSService';
 import { LipSyncDriver } from './LipSyncDriver';
@@ -24,11 +25,20 @@ import { keyboardShortcuts, formatShortcut } from './KeyboardShortcuts';
 import { gestureRecognitionService, type GestureResult } from './GestureRecognitionService';
 import { gestureReactionMapper, type GestureReaction } from './GestureReactionMapper';
 import { expressionVariantSystem, type VariantContext, type VariantSelection } from './ExpressionVariantSystem';
+import { 
+  sceneDirector, 
+  type SceneMode, 
+  type SceneState, 
+  type SceneElements,
+  type SceneChangeEvent 
+} from './SceneDirectorSystem';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
   gatewayToken?: string;
   fishApiKey?: string;
+  bridgeUrl?: string;       // OpenClaw Bridge URL
+  useBridge?: boolean;      // 使用 Bridge 模式
   enableTTS?: boolean;
   enableLipSync?: boolean;
   enableEmotionDetection?: boolean;
@@ -52,6 +62,8 @@ type TextCallback = (text: string, isComplete: boolean) => void;
 
 export class AvatarSystem {
   private connector: OpenClawConnector;
+  private bridgeConnector: OpenClawBridgeConnector;
+  private useBridge: boolean = true;  // 默认使用 Bridge
   private ttsService: TTSService | null = null;
   private lipSyncDriver: LipSyncDriver;
   private config: Required<AvatarSystemConfig>;
@@ -91,15 +103,24 @@ export class AvatarSystem {
       gatewayUrl: config.gatewayUrl ?? 'ws://localhost:18789/ws',
       gatewayToken: config.gatewayToken ?? '',
       fishApiKey: config.fishApiKey ?? '',
+      bridgeUrl: config.bridgeUrl ?? 'http://localhost:12394',
+      useBridge: config.useBridge ?? true,
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
       enableEmotionDetection: config.enableEmotionDetection ?? true,
     };
 
-    // 初始化连接器
+    this.useBridge = this.config.useBridge ?? true;
+
+    // 初始化 WebSocket 连接器
     this.connector = new OpenClawConnector({
       gatewayUrl: this.config.gatewayUrl,
       token: this.config.gatewayToken,
+    });
+
+    // 初始化 Bridge 连接器 (更稳定)
+    this.bridgeConnector = new OpenClawBridgeConnector({
+      bridgeUrl: this.config.bridgeUrl ?? 'http://localhost:12394',
     });
 
     // 初始化口型同步
@@ -288,6 +309,12 @@ export class AvatarSystem {
         const sources = contextResult.influences.map(i => `${i.source}:${i.emotion}`).join(', ');
         console.log('[AvatarSystem] 情绪上下文:', sources, '→', finalEmotion);
       }
+      
+      // SOTA Round 40: 场景导演自动分析
+      if (this.useSceneDirector) {
+        const tone = emotionContextEngine.getConversationTone();
+        sceneDirector.analyzeText(text, finalEmotion, tone.atmosphere);
+      }
     }
     
     // 只有置信度足够高才切换表情
@@ -335,6 +362,9 @@ export class AvatarSystem {
   
   // 是否使用表情变体系统 (默认启用) - SOTA Round 26
   private useVariantSystem = true;
+  
+  // 是否使用场景导演系统 (默认启用) - SOTA Round 40
+  private useSceneDirector = true;
 
   /**
    * 启用/禁用表情变体系统
@@ -342,6 +372,61 @@ export class AvatarSystem {
   setUseVariantSystem(enabled: boolean) {
     this.useVariantSystem = enabled;
     console.log('[AvatarSystem] 表情变体系统:', enabled ? '启用' : '禁用');
+  }
+
+  // ========== SOTA Round 40: 场景导演系统 API ==========
+
+  /**
+   * 启用/禁用场景导演系统
+   */
+  setUseSceneDirector(enabled: boolean) {
+    this.useSceneDirector = enabled;
+    console.log('[AvatarSystem] 场景导演系统:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 手动切换场景
+   */
+  setScene(mode: SceneMode, immediate?: boolean) {
+    sceneDirector.setScene(mode, { immediate });
+    console.log('[AvatarSystem] 场景切换:', mode);
+  }
+
+  /**
+   * 获取当前场景状态
+   */
+  getSceneState(): SceneState {
+    return sceneDirector.getState();
+  }
+
+  /**
+   * 获取当前场景元素配置
+   */
+  getSceneElements(): SceneElements {
+    return sceneDirector.getCurrentElements();
+  }
+
+  /**
+   * 设置场景自动检测
+   */
+  setSceneAutoMode(enabled: boolean) {
+    sceneDirector.setAutoMode(enabled);
+    console.log('[AvatarSystem] 场景自动检测:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 订阅场景变化
+   */
+  onSceneChange(callback: (event: SceneChangeEvent) => void): () => void {
+    return sceneDirector.onSceneChange(callback);
+  }
+
+  /**
+   * 获取场景建议
+   */
+  getSceneSuggestion(text: string) {
+    const emotion = detectEmotion(text).emotion;
+    return sceneDirector.getSuggestion(text, emotion);
   }
 
   /**
@@ -510,9 +595,29 @@ export class AvatarSystem {
   }
 
   /**
-   * 连接 OpenClaw Gateway
+   * 连接 OpenClaw（自动选择 Bridge 或 WebSocket）
    */
   async connect(): Promise<void> {
+    if (this.useBridge) {
+      console.log('[AvatarSystem] 使用 Bridge 模式连接...');
+      try {
+        await this.bridgeConnector.connect();
+        // 设置 Bridge 消息处理
+        this.bridgeConnector.onMessage((chunk) => {
+          this.handleMessageChunk(chunk);
+        });
+        this.bridgeConnector.onStatusChange((status) => {
+          this.updateState({ connectionStatus: status });
+        });
+        console.log('[AvatarSystem] ✅ Bridge 连接成功！初音未来已上线~');
+        return;
+      } catch (e) {
+        console.warn('[AvatarSystem] Bridge 连接失败，尝试 WebSocket:', e);
+      }
+    }
+    
+    // 回退到 WebSocket
+    console.log('[AvatarSystem] 使用 WebSocket 模式连接...');
     await this.connector.connect();
   }
 
@@ -521,6 +626,7 @@ export class AvatarSystem {
    */
   disconnect() {
     this.connector.disconnect();
+    this.bridgeConnector.disconnect();
     this.ttsService?.stop();
     this.lipSyncDriver.stop();
     this.ttsQueue = [];
@@ -531,6 +637,9 @@ export class AvatarSystem {
    * 发送消息
    */
   async sendMessage(text: string): Promise<boolean> {
+    if (this.useBridge && this.bridgeConnector.getStatus() === 'connected') {
+      return this.bridgeConnector.sendMessage(text);
+    }
     return this.connector.sendMessage(text);
   }
 

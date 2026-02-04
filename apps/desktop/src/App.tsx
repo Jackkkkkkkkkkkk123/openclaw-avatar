@@ -7,6 +7,7 @@ import { DevPanel } from './components/DevPanel';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { EmotionParticles } from './components/EmotionParticles';
 import { EmotionBackground } from './components/EmotionBackground';
+import { SceneDirectorPanel } from './components/SceneDirectorPanel';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
@@ -427,6 +428,13 @@ function App() {
         visible={showDevPanel()}
         position="top-right"
       />
+      
+      {/* SOTA Round 40: 场景导演面板 */}
+      <Show when={showDevPanel()}>
+        <div class="scene-director-wrapper">
+          <SceneDirectorPanel />
+        </div>
+      </Show>
     </main>
   );
 }

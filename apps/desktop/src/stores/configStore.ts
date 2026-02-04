@@ -6,6 +6,8 @@ export interface AppConfig {
   gatewayUrl: string;
   gatewayToken: string;
   fishApiKey: string;
+  bridgeUrl: string;      // OpenClaw Bridge URL
+  useBridge: boolean;     // 使用 Bridge 模式（更稳定）
   
   // 外观配置
   theme: 'dark' | 'light' | 'system';
@@ -27,6 +29,8 @@ const DEFAULT_CONFIG: AppConfig = {
   gatewayUrl: 'ws://localhost:18789/ws',
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979', // 内置 Gateway Token
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
+  bridgeUrl: 'http://localhost:12394',  // OpenClaw Bridge
+  useBridge: true,  // 默认使用 Bridge 模式（更稳定）
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',
   modelName: 'Lain',
@@ -45,6 +49,7 @@ const BUILTIN_CONFIG = {
   gatewayUrl: 'ws://localhost:18789/ws',
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979',
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3',
+  bridgeUrl: 'http://localhost:12394',
 };
 
 // 从 localStorage 加载配置（连接配置始终使用内置值）
