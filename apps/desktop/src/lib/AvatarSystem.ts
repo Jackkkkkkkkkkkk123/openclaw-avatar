@@ -34,6 +34,17 @@ import {
   type SceneElements,
   type SceneChangeEvent 
 } from './SceneDirectorSystem';
+import {
+  AvatarTouchInteraction,
+  createAvatarTouchInteraction,
+  mapHitAreaToTouchArea,
+  type TouchArea,
+  type TouchType,
+  type InteractionReaction,
+  type EmotionalState as TouchEmotionalState,
+  type InteractionStats,
+  type AvatarTouchConfig,
+} from './AvatarTouchInteraction';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -96,6 +107,12 @@ export class AvatarSystem {
   private gestureRecognitionUnsubscribe: (() => void) | null = null;
   private gestureReactionUnsubscribe: (() => void) | null = null;
 
+  // 触摸互动系统
+  private touchInteraction: AvatarTouchInteraction;
+  private touchReactionUnsubscribe: (() => void) | null = null;
+  private touchAffectionUnsubscribe: (() => void) | null = null;
+  private touchExcessiveUnsubscribe: (() => void) | null = null;
+
   // 情绪恢复定时器
   private emotionResetTimer: ReturnType<typeof setTimeout> | null = null;
   
@@ -134,6 +151,15 @@ export class AvatarSystem {
       smoothing: 0.4,
       sensitivity: 1.2,
     });
+
+    // 初始化触摸互动系统
+    this.touchInteraction = createAvatarTouchInteraction({
+      enabled: true,
+      hapticFeedback: true,
+      soundEnabled: true,
+      particleEnabled: true,
+    });
+    this.setupTouchInteractionCallbacks();
 
     // 初始化 TTS
     if (this.config.enableTTS) {
@@ -245,6 +271,175 @@ export class AvatarSystem {
     avatarController.initAdvancedSystems();
     
     console.log('[AvatarSystem] 高级动画系统已启动');
+  }
+
+  /**
+   * 设置触摸互动回调
+   */
+  private setupTouchInteractionCallbacks(): void {
+    // 触摸反应回调 - 应用表情和动作
+    this.touchReactionUnsubscribe = this.touchInteraction.onReaction((reaction, event) => {
+      console.log(`[AvatarSystem] 触摸反应: ${event.area} ${event.type}`);
+      
+      // 应用表情
+      if (reaction.expression) {
+        this.setEmotion(reaction.expression as Expression);
+      }
+      
+      // 播放动作
+      if (reaction.motion) {
+        avatarController.playMotion(reaction.motion);
+      }
+      
+      // 播放对话 TTS
+      if (reaction.dialogue && this.config.enableTTS) {
+        this.speak(reaction.dialogue);
+      }
+      
+      // 触发粒子效果 (通过事件通知 UI)
+      if (reaction.particle) {
+        this.notifyTouchParticle(reaction.particle);
+      }
+    });
+
+    // 亲密度变化回调
+    this.touchAffectionUnsubscribe = this.touchInteraction.onAffectionChange((affection, delta) => {
+      console.log(`[AvatarSystem] 亲密度: ${affection.toFixed(1)} (${delta >= 0 ? '+' : ''}${delta.toFixed(1)})`);
+    });
+
+    // 过度触摸回调
+    this.touchExcessiveUnsubscribe = this.touchInteraction.onExcessiveTouch((area, message) => {
+      console.log(`[AvatarSystem] 过度触摸 ${area}: ${message}`);
+      
+      // 播放抱怨语音
+      if (this.config.enableTTS) {
+        this.speak(message);
+      }
+      
+      // 显示烦躁表情
+      this.setEmotion('annoyed');
+    });
+
+    // 启动触摸系统
+    this.touchInteraction.start();
+    console.log('[AvatarSystem] 触摸互动系统已启动');
+  }
+
+  // 触摸粒子回调
+  private touchParticleCallbacks: Set<(particle: string) => void> = new Set();
+
+  /**
+   * 订阅触摸粒子效果事件
+   */
+  onTouchParticle(callback: (particle: string) => void): () => void {
+    this.touchParticleCallbacks.add(callback);
+    return () => this.touchParticleCallbacks.delete(callback);
+  }
+
+  private notifyTouchParticle(particle: string): void {
+    for (const callback of this.touchParticleCallbacks) {
+      try {
+        callback(particle);
+      } catch (e) {
+        console.error('[AvatarSystem] 触摸粒子回调错误:', e);
+      }
+    }
+  }
+
+  // ============== 触摸互动 API ==============
+
+  /**
+   * 处理 Live2D hit area 触摸开始
+   */
+  handleTouchStart(hitArea: string, position: { x: number; y: number }): void {
+    const area = mapHitAreaToTouchArea(hitArea);
+    this.touchInteraction.handleTouchStart(area, position);
+  }
+
+  /**
+   * 处理 Live2D hit area 触摸结束
+   */
+  handleTouchEnd(hitArea: string, position: { x: number; y: number }): void {
+    const area = mapHitAreaToTouchArea(hitArea);
+    this.touchInteraction.handleTouchEnd(area, position);
+  }
+
+  /**
+   * 处理触摸移动
+   */
+  handleTouchMove(hitArea: string, position: { x: number; y: number }, delta: { x: number; y: number }): void {
+    const area = mapHitAreaToTouchArea(hitArea);
+    this.touchInteraction.handleTouchMove(area, position, delta);
+  }
+
+  /**
+   * 快捷方法 - 摸头
+   */
+  patHead(): void {
+    this.touchInteraction.pat('head');
+  }
+
+  /**
+   * 快捷方法 - 戳脸
+   */
+  pokeCheek(): void {
+    this.touchInteraction.poke('cheek');
+  }
+
+  /**
+   * 快捷方法 - 拍肩
+   */
+  patShoulder(): void {
+    this.touchInteraction.pat('shoulder');
+  }
+
+  /**
+   * 获取亲密度
+   */
+  getAffection(): number {
+    return this.touchInteraction.getAffection();
+  }
+
+  /**
+   * 设置亲密度
+   */
+  setAffection(value: number): void {
+    this.touchInteraction.setAffection(value);
+  }
+
+  /**
+   * 获取触摸情感状态
+   */
+  getTouchEmotionalState(): TouchEmotionalState {
+    return this.touchInteraction.getEmotionalState();
+  }
+
+  /**
+   * 获取触摸统计
+   */
+  getTouchStats(): InteractionStats {
+    return this.touchInteraction.getStats();
+  }
+
+  /**
+   * 配置触摸互动
+   */
+  configureTouchInteraction(config: Partial<AvatarTouchConfig>): void {
+    this.touchInteraction.updateConfig(config);
+  }
+
+  /**
+   * 导出触摸互动数据
+   */
+  exportTouchData(): { affection: number; stats: InteractionStats } {
+    return this.touchInteraction.exportData();
+  }
+
+  /**
+   * 导入触摸互动数据
+   */
+  importTouchData(data: { affection?: number; stats?: Partial<InteractionStats> }): void {
+    this.touchInteraction.importData(data);
   }
 
   // 是否使用 Viseme 精确口型 (默认启用)
@@ -1297,6 +1492,13 @@ export class AvatarSystem {
     this.stopGestureRecognition();
     gestureRecognitionService.destroy();
     gestureReactionMapper.destroy();
+
+    // 清理触摸互动
+    if (this.touchReactionUnsubscribe) this.touchReactionUnsubscribe();
+    if (this.touchAffectionUnsubscribe) this.touchAffectionUnsubscribe();
+    if (this.touchExcessiveUnsubscribe) this.touchExcessiveUnsubscribe();
+    this.touchInteraction.destroy();
+    this.touchParticleCallbacks.clear();
     
     // 销毁键盘快捷键
     keyboardShortcuts.destroy();
