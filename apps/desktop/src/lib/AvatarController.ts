@@ -16,6 +16,8 @@
 
 import { visemeDriver, type Viseme } from './VisemeDriver';
 import { microExpressionSystem } from './MicroExpressionSystem';
+import { motionQueueSystem, type MotionPriority } from './MotionQueueSystem';
+import { physicsEnhancer } from './PhysicsEnhancer';
 
 import type { Live2DModel } from 'pixi-live2d-display';
 
@@ -1115,6 +1117,12 @@ export class AvatarController {
   private visemeUnsubscribe: (() => void) | null = null;
   private microExpressionUnsubscribe: (() => void) | null = null;
 
+  // 动作队列和物理系统
+  private motionQueueEnabled = true;
+  private physicsEnabled = true;
+  private motionQueueUnsubscribe: (() => void) | null = null;
+  private physicsUnsubscribe: (() => void) | null = null;
+
   /**
    * 初始化 Viseme 和微表情系统
    */
@@ -1137,10 +1145,157 @@ export class AvatarController {
       this.applyMicroExpressionParams(params);
     });
 
+    // 设置动作队列回调
+    motionQueueSystem.onPlay((group, index, weight) => {
+      if (!this.motionQueueEnabled || !this.model) return;
+      this.model.motion(group, index, weight > 0.5 ? 2 : 1);
+    });
+    
+    motionQueueSystem.onStop((group) => {
+      if (!this.model) return;
+      // Live2D 会自动结束动作
+    });
+    
+    // 设置默认 Idle 动作
+    motionQueueSystem.setIdleMotion({
+      id: 'default_idle',
+      group: 'idle',
+      index: 0,
+      loop: true,
+    });
+
+    // 订阅物理参数
+    this.physicsUnsubscribe = physicsEnhancer.onParams((params) => {
+      if (!this.physicsEnabled || !this.model?.internalModel) return;
+      this.applyPhysicsParams(params);
+    });
+    
+    // 启动物理系统
+    physicsEnhancer.start();
+
     // 启动微表情系统
     microExpressionSystem.start();
     
-    console.log('[AvatarController] 高级系统已初始化 (Viseme + 微表情)');
+    console.log('[AvatarController] 高级系统已初始化 (Viseme + 微表情 + 动作队列 + 物理)');
+  }
+
+  /**
+   * 应用物理参数到模型
+   */
+  private applyPhysicsParams(params: {
+    hairAngleX: number;
+    hairAngleZ: number;
+    hairSwing: number;
+    clothSwing: number;
+    skirtAngle: number;
+    accessorySwing: number;
+    ribbonAngle: number;
+    bodyBreath: number;
+    shoulderMove: number;
+  }) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (!model?.parameters) return;
+        
+        // 头发物理
+        this.setParam(model, ['ParamHairFront', 'PARAM_HAIR_FRONT'], params.hairAngleX * 0.5);
+        this.setParam(model, ['ParamHairSide', 'PARAM_HAIR_SIDE'], params.hairAngleZ * 0.5);
+        this.setParam(model, ['ParamHairBack', 'PARAM_HAIR_BACK'], params.hairSwing * 0.3);
+        
+        // 身体物理
+        this.setParam(model, ['ParamBodyAngleX', 'PARAM_BODY_ANGLE_X'], params.bodyBreath * 2);
+        this.setParam(model, ['ParamBodyAngleZ', 'PARAM_BODY_ANGLE_Z'], params.clothSwing * 0.5);
+        
+        // 饰品物理 (如果模型支持)
+        this.setParam(model, ['ParamArmL', 'PARAM_ARM_L'], params.accessorySwing * 0.3);
+        this.setParam(model, ['ParamArmR', 'PARAM_ARM_R'], -params.accessorySwing * 0.3);
+      }
+    } catch (e) {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 启用/禁用动作队列系统
+   */
+  setMotionQueueEnabled(enabled: boolean) {
+    this.motionQueueEnabled = enabled;
+  }
+
+  /**
+   * 启用/禁用物理系统
+   */
+  setPhysicsEnabled(enabled: boolean) {
+    this.physicsEnabled = enabled;
+    if (enabled) {
+      physicsEnhancer.start();
+    } else {
+      physicsEnhancer.stop();
+    }
+  }
+
+  /**
+   * 使用动作队列播放动作
+   */
+  queueMotion(group: string, options?: {
+    index?: number;
+    priority?: MotionPriority;
+    duration?: number;
+    fadeIn?: number;
+    fadeOut?: number;
+  }) {
+    motionQueueSystem.requestMotion({
+      id: `${group}_${Date.now()}`,
+      group,
+      index: options?.index ?? 0,
+      priority: options?.priority ?? 'gesture',
+      duration: options?.duration,
+      fadeIn: options?.fadeIn,
+      fadeOut: options?.fadeOut,
+    });
+  }
+
+  /**
+   * 播放手势动作
+   */
+  playGesture(gesture: 'wave' | 'point' | 'goodbye_left' | 'goodbye_right') {
+    motionQueueSystem.playGesture(gesture);
+  }
+
+  /**
+   * 播放反应动作
+   */
+  playReaction(reaction: 'nod' | 'shake' | 'surprise') {
+    motionQueueSystem.playReaction(reaction);
+  }
+
+  /**
+   * 设置风力
+   */
+  setWind(enabled: boolean, direction?: number) {
+    physicsEnhancer.setWindEnabled(enabled);
+    if (direction !== undefined) {
+      physicsEnhancer.setWindDirection(direction);
+    }
+  }
+
+  /**
+   * 更新头部位置 (用于物理计算)
+   */
+  updateHeadPositionForPhysics(x: number, y: number) {
+    physicsEnhancer.updateHeadPosition(x, y);
+  }
+
+  /**
+   * 设置说话状态 (用于物理)
+   */
+  setSpeakingForPhysics(speaking: boolean, intensity = 0.5) {
+    physicsEnhancer.setSpeaking(speaking, intensity);
   }
 
   /**
@@ -1375,8 +1530,14 @@ export class AvatarController {
       this.microExpressionUnsubscribe();
       this.microExpressionUnsubscribe = null;
     }
+    if (this.physicsUnsubscribe) {
+      this.physicsUnsubscribe();
+      this.physicsUnsubscribe = null;
+    }
     visemeDriver.destroy();
     microExpressionSystem.destroy();
+    motionQueueSystem.destroy();
+    physicsEnhancer.destroy();
     
     this.model = null;
     this.availableExpressions = [];
