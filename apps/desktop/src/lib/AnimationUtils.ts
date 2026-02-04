@@ -221,11 +221,12 @@ export function getEasing(name: string): EasingFunction {
  * 帧率限制器
  */
 export class FrameRateLimiter {
-  private lastFrameTime = 0;
+  private lastFrameTime = -Infinity; // 使用 -Infinity 确保第一帧总是渲染
   private readonly minFrameInterval: number;
 
   constructor(maxFps: number = 60) {
-    this.minFrameInterval = 1000 / maxFps;
+    // 防止除零错误
+    this.minFrameInterval = maxFps > 0 ? 1000 / maxFps : 0;
   }
 
   /**
@@ -244,7 +245,7 @@ export class FrameRateLimiter {
    * 重置
    */
   reset() {
-    this.lastFrameTime = 0;
+    this.lastFrameTime = -Infinity;
   }
 }
 

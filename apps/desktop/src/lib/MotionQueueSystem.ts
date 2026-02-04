@@ -254,9 +254,12 @@ export class MotionQueueSystem {
     this.isRunning = false;
     if (this.animationFrame !== null) {
       cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = null;
     }
     this.activeMotions.clear();
     this.queue = [];
+    this.playCallback = null;
+    this.stopCallback = null;
   }
 
   // ========== 私有方法 ==========
