@@ -262,10 +262,12 @@
 /* 输入区域 */
 .chat-panel__input {
   display: flex;
+  align-items: flex-end;
   gap: 0.5rem;
   padding: 0.75rem;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border);
+  position: relative;
 }
 
 .chat-panel__input textarea {

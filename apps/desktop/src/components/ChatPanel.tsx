@@ -1,6 +1,7 @@
 // 优化后的聊天面板组件
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { Button } from './ui';
+import { VoiceInputButton } from './VoiceInputButton';
 import './ChatPanel.css';
 
 export interface ChatMessage {
@@ -143,6 +144,15 @@ export function ChatPanel(props: ChatPanelProps) {
       
       {/* 输入区域 */}
       <div class="chat-panel__input">
+        {/* 语音输入按钮 */}
+        <VoiceInputButton 
+          onTranscript={(text) => {
+            setInputText(prev => prev ? prev + ' ' + text : text);
+            adjustTextareaHeight();
+          }}
+          disabled={props.disabled}
+        />
+        
         <textarea
           ref={inputRef}
           value={inputText()}
@@ -151,7 +161,7 @@ export function ChatPanel(props: ChatPanelProps) {
             adjustTextareaHeight();
           }}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+          placeholder="输入消息或按住 🎙️ 说话..."
           rows={1}
           disabled={props.disabled}
         />
