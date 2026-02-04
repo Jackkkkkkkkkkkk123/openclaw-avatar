@@ -1,239 +1,488 @@
-/* OpenClaw Avatar - 主应用样式 */
+/* 🎨 OpenClaw Avatar - SOTA 级别应用样式
+ * 设计风格: Glassmorphism + Cyber Aesthetic
+ */
 
-/* 应用容器 */
+/* ========================================
+   📦 应用容器
+   ======================================== */
+
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1rem;
-  gap: 1rem;
+  padding: var(--space-6);
+  gap: var(--space-6);
+  animation: fade-in var(--duration-slow) var(--ease-out);
 }
 
-/* 头部 */
+/* ========================================
+   🎯 头部
+   ======================================== */
+
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0;
+  padding: var(--space-4) var(--space-6);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
 }
 
 .app-header__brand {
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.app-header__logo {
+  width: 40px;
+  height: 40px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: var(--shadow-glow);
+  animation: glow-pulse 3s ease-in-out infinite;
 }
 
 .app-header__brand h1 {
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, var(--primary), #a855f7);
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 .app-header__subtitle {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border);
 }
 
 .app-header__actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-/* 主区域 */
-.app-main {
+/* 头部按钮 */
+.app-header__actions .btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.app-header__actions .btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-hover);
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.app-header__actions .btn:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   🎭 主区域
+   ======================================== */
+
+.app-main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: var(--space-6);
   flex: 1;
-  min-height: 450px;
+  min-height: 500px;
 }
 
 .app-main--chat-left {
-  flex-direction: row-reverse;
+  grid-template-columns: 380px 1fr;
 }
 
-/* Avatar 舞台 */
+.app-main--chat-left .avatar-stage {
+  order: 2;
+}
+
+.app-main--chat-left .chat-aside {
+  order: 1;
+}
+
+/* ========================================
+   ✨ Avatar 舞台
+   ======================================== */
+
 .avatar-stage {
   position: relative;
-  flex: 1;
-  background: linear-gradient(180deg, var(--stage-bg-start) 0%, var(--stage-bg-end) 100%);
-  border-radius: 20px;
+  background: var(--stage-bg);
+  border-radius: var(--radius-2xl);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 450px;
-  box-shadow: var(--shadow);
+  min-height: 500px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
 }
 
-/* 说话指示器 */
+/* 舞台底部发光 */
+.avatar-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--stage-glow);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 舞台网格效果 */
+.avatar-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(var(--glass-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Avatar 容器 */
+.avatar-stage canvas {
+  position: relative;
+  z-index: 2;
+}
+
+/* ========================================
+   🎤 说话指示器
+   ======================================== */
+
 .speaking-badge {
   position: absolute;
-  bottom: 1rem;
+  bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--primary);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  animation: slide-up 0.3s ease;
+  gap: var(--space-3);
+  background: var(--gradient-primary);
+  color: var(--text-on-primary);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  z-index: 10;
+  animation: slide-up var(--duration-normal) var(--ease-spring);
+  box-shadow: var(--shadow-glow);
 }
 
 .speaking-badge__pulse {
-  width: 8px;
-  height: 8px;
-  background: white;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
   border-radius: 50%;
   animation: pulse 1s ease-in-out infinite;
 }
 
-/* 表情指示器 */
+/* ========================================
+   😊 表情徽章
+   ======================================== */
+
 .emotion-badge {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  font-size: 1.5rem;
-  background: var(--bg-secondary);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  top: var(--space-5);
+  right: var(--space-5);
+  font-size: var(--text-2xl);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  transition: transform var(--duration-fast) var(--ease-spring);
 }
 
-/* 聊天侧边栏 */
+.emotion-badge:hover {
+  transform: scale(1.1);
+}
+
+/* ========================================
+   💬 聊天侧边栏
+   ======================================== */
+
 .chat-aside {
-  width: 350px;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
 }
 
-/* 控制面板 */
+/* ========================================
+   🎮 控制面板
+   ======================================== */
+
 .controls-panel {
-  background: var(--bg-secondary);
-  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
 .controls-panel__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: var(--space-4) var(--space-5);
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.controls-panel__header:hover {
+  background: var(--bg-elevated);
+}
+
+.controls-panel__header svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.controls-panel--expanded .controls-panel__header svg {
+  transform: rotate(180deg);
 }
 
 .controls-panel__body {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-5);
+  padding: var(--space-5);
+  animation: slide-up var(--duration-normal) var(--ease-out);
 }
 
+/* 控制组 */
 .control-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-3);
 }
 
 .control-group h4 {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--primary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  margin: 0;
 }
 
 .control-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-/* 状态栏 */
+/* 控制按钮 */
+.control-buttons .btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.control-buttons .btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.control-buttons .btn:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   📊 状态栏
+   ======================================== */
+
 .status-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  font-size: 0.8rem;
+  padding: var(--space-4) var(--space-5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-sm);
 }
 
+/* 连接指示器 */
 .connection-indicator {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-3);
+  font-weight: 500;
 }
 
 .connection-indicator__dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--text-muted);
+  box-shadow: 0 0 0 3px oklch(0.5 0 0 / 0.2);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .connection-indicator--connected .connection-indicator__dot {
   background: var(--success);
+  box-shadow: 0 0 0 3px oklch(0.72 0.18 145 / 0.3), 0 0 12px var(--success);
   animation: pulse 2s infinite;
 }
 
 .connection-indicator--connecting .connection-indicator__dot {
   background: var(--warning);
-  animation: pulse 0.5s infinite;
+  box-shadow: 0 0 0 3px oklch(0.80 0.16 85 / 0.3);
+  animation: pulse 0.6s infinite;
 }
 
 .connection-indicator--error .connection-indicator__dot {
   background: var(--danger);
+  box-shadow: 0 0 0 3px oklch(0.65 0.22 25 / 0.3);
 }
 
 .status-message {
   color: var(--text-muted);
 }
 
+/* 技术徽章 */
 .tech-badges {
   display: flex;
-  gap: 0.5rem;
-  color: var(--text-muted);
+  gap: var(--space-2);
 }
 
-/* 响应式设计 */
-@media (max-width: 900px) {
+.tech-badges span {
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* ========================================
+   📱 响应式设计
+   ======================================== */
+
+@media (max-width: 1024px) {
   .app {
-    padding: 0.75rem;
+    padding: var(--space-4);
+    gap: var(--space-4);
   }
   
   .app-main {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     min-height: auto;
   }
   
   .app-main--chat-left {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+  
+  .app-main--chat-left .avatar-stage,
+  .app-main--chat-left .chat-aside {
+    order: unset;
   }
   
   .avatar-stage {
-    min-height: 350px;
+    min-height: 400px;
   }
   
   .chat-aside {
-    width: 100%;
-    min-height: 300px;
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+  
+  .app-header__brand {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .app-header__subtitle {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: var(--space-2);
+  }
+  
+  .app-header__brand h1 {
+    font-size: var(--text-xl);
+  }
+  
+  .avatar-stage {
+    min-height: 320px;
+  }
+  
+  .emotion-badge {
+    width: 44px;
+    height: 44px;
+    font-size: var(--text-xl);
   }
   
   .controls-panel__body {
@@ -242,36 +491,8 @@
   
   .status-bar {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-3);
     text-align: center;
-  }
-}
-
-@media (max-width: 600px) {
-  .app-header {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
-  }
-  
-  .app-header__brand {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-  }
-  
-  .app-header__brand h1 {
-    font-size: 1.25rem;
-  }
-  
-  .avatar-stage {
-    min-height: 300px;
-  }
-  
-  .emotion-badge {
-    width: 32px;
-    height: 32px;
-    font-size: 1.2rem;
   }
   
   .tech-badges {
@@ -279,14 +500,57 @@
   }
 }
 
-/* 动画 */
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(10px);
+@media (max-width: 480px) {
+  .app {
+    padding: var(--space-3);
+    gap: var(--space-3);
   }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+  
+  .app-header__actions .btn {
+    width: 40px;
+    height: 40px;
   }
+  
+  .avatar-stage {
+    min-height: 280px;
+    border-radius: var(--radius-xl);
+  }
+  
+  .chat-aside {
+    border-radius: var(--radius-xl);
+  }
+  
+  .speaking-badge {
+    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-4);
+  }
+}
+
+/* ========================================
+   🌟 特殊效果
+   ======================================== */
+
+/* 舞台聚光灯效果 */
+.avatar-stage--spotlight::before {
+  background: 
+    var(--stage-glow),
+    radial-gradient(ellipse at 50% 30%, oklch(1 0 0 / 0.03), transparent 50%);
+}
+
+/* 说话时的舞台效果 */
+.avatar-stage--speaking {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+/* 空状态 */
+.avatar-stage--empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  color: var(--text-muted);
+}
+
+.avatar-stage--empty::before {
+  animation: glow-pulse 4s ease-in-out infinite;
 }
