@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: AppConfig = {
   enableLighting: false,  // 动态光照（花架子，禁用）
 };
 
-const STORAGE_KEY = 'openclaw-avatar-config-v2'; // v2: 强制使用内置配置
+const STORAGE_KEY = 'openclaw-avatar-config-v3'; // v3: 重置 UI 配置（控制面板收起）
 
 // 内置配置（不允许用户覆盖）
 const BUILTIN_CONFIG = {
