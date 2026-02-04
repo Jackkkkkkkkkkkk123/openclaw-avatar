@@ -10,6 +10,7 @@ export { AdvancedAnimationPanel } from './AdvancedAnimationPanel';
 export { EmotionHistoryPanel } from './EmotionHistoryPanel';
 export { PerformancePanel } from './PerformancePanel';
 export { EmotionParticles } from './EmotionParticles';
+export { SceneDirectorPanel } from './SceneDirectorPanel';
 
 // UI 组件重新导出
 export * from './ui';

@@ -605,3 +605,46 @@
   z-index: 5;
   overflow: hidden;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scene Director Panel Wrapper — SOTA Round 40
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.scene-director-wrapper {
+  position: fixed;
+  bottom: var(--space-6);
+  left: var(--space-6);
+  z-index: 1000;
+  max-width: 420px;
+  width: calc(100% - var(--space-12));
+  animation: slide-up var(--duration-normal) var(--ease-out);
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .scene-director-wrapper {
+    left: var(--space-4);
+    bottom: var(--space-4);
+    max-width: calc(100% - var(--space-8));
+  }
+}
+
+@media (max-width: 600px) {
+  .scene-director-wrapper {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+    max-width: none;
+    width: auto;
+  }
+}
