@@ -121,11 +121,32 @@ export class AvatarSystem {
   private isProcessingTTS = false;
 
   constructor(config: AvatarSystemConfig = {}) {
+    // 检测运行环境
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    const isLocal = hostname === 'localhost' || 
+                    hostname === '127.0.0.1' || 
+                    hostname.startsWith('192.168.') ||
+                    hostname.startsWith('10.') ||
+                    hostname.endsWith('.local');
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    
+    // 根据环境选择默认 URL
+    const defaultGatewayUrl = isLocal 
+      ? 'ws://localhost:18789/ws'
+      : `${origin.replace('http', 'ws')}/api/gateway/ws`;
+    const defaultBridgeUrl = isLocal 
+      ? 'http://localhost:12394'
+      : `${origin}/api/bridge`;
+    
+    console.log(`[AvatarSystem] 环境检测: ${isLocal ? '本地' : '外网'}`);
+    console.log(`[AvatarSystem] Gateway URL: ${config.gatewayUrl ?? defaultGatewayUrl}`);
+    console.log(`[AvatarSystem] Bridge URL: ${config.bridgeUrl ?? defaultBridgeUrl}`);
+    
     this.config = {
-      gatewayUrl: config.gatewayUrl ?? 'ws://localhost:18789/ws',
+      gatewayUrl: config.gatewayUrl ?? defaultGatewayUrl,
       gatewayToken: config.gatewayToken ?? '',
       fishApiKey: config.fishApiKey ?? '',
-      bridgeUrl: config.bridgeUrl ?? 'http://localhost:12394',
+      bridgeUrl: config.bridgeUrl ?? defaultBridgeUrl,
       useBridge: config.useBridge ?? true,
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
@@ -143,7 +164,7 @@ export class AvatarSystem {
 
     // 初始化 Bridge 连接器 (更稳定)
     this.bridgeConnector = new OpenClawBridgeConnector({
-      bridgeUrl: this.config.bridgeUrl ?? 'http://localhost:12394',
+      bridgeUrl: this.config.bridgeUrl,
     });
 
     // 初始化口型同步
@@ -908,11 +929,27 @@ export class AvatarSystem {
   }
 
   /**
+   * 检测是否在本地环境
+   */
+  private isLocalEnvironment(): boolean {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || 
+           hostname === '127.0.0.1' || 
+           hostname.startsWith('192.168.') ||
+           hostname.startsWith('10.') ||
+           hostname.endsWith('.local');
+  }
+
+  /**
    * 连接 OpenClaw（自动选择 Bridge 或 WebSocket）
    */
   async connect(): Promise<void> {
+    const isLocal = this.isLocalEnvironment();
+    
+    // Bridge 模式（本地直连或外网通过代理）
     if (this.useBridge) {
-      console.log('[AvatarSystem] 使用 Bridge 模式连接...');
+      console.log(`[AvatarSystem] 使用 Bridge 模式连接... (${isLocal ? '本地直连' : '代理模式'})`);
+      console.log(`[AvatarSystem] Bridge URL: ${this.config.bridgeUrl}`);
       try {
         await this.bridgeConnector.connect();
         // 设置 Bridge 消息处理
@@ -922,7 +959,7 @@ export class AvatarSystem {
         this.bridgeConnector.onStatusChange((status) => {
           this.updateState({ connectionStatus: status });
         });
-        // 主动更新状态为已连接（因为 onStatusChange 是在 connect 后注册的）
+        // 主动更新状态为已连接
         this.updateState({ connectionStatus: 'connected' });
         console.log('[AvatarSystem] ✅ Bridge 连接成功！初音未来已上线~');
         return;
@@ -933,6 +970,8 @@ export class AvatarSystem {
     
     // 回退到 WebSocket
     console.log('[AvatarSystem] 使用 WebSocket 模式连接...');
+    console.log(`[AvatarSystem] Gateway URL: ${this.config.gatewayUrl}`);
+    
     await this.connector.connect();
   }
 

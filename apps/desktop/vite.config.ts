@@ -37,21 +37,34 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
-    // 代理 Fish Audio API 绕过 CORS (开发环境)
+    // 代理配置
     proxy: {
+      // Fish Audio API 代理（绕过 CORS）
       '/api/fish-tts': {
         target: 'https://api.fish.audio',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/fish-tts/, '/v1/tts'),
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq, req) => {
-            // 转发 Authorization header
             const auth = req.headers['authorization'];
             if (auth) {
               proxyReq.setHeader('Authorization', auth);
             }
           });
         },
+      },
+      // OpenClaw Bridge 代理（让外网也能访问 Bridge）
+      '/api/bridge': {
+        target: 'http://localhost:12394',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/bridge/, ''),
+      },
+      // OpenClaw Gateway WebSocket 代理
+      '/api/gateway': {
+        target: 'ws://localhost:18789',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api\/gateway/, ''),
       },
     },
   },

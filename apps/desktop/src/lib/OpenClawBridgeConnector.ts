@@ -22,9 +22,28 @@ export class OpenClawBridgeConnector {
   private abortController: AbortController | null = null;
 
   constructor(config: BridgeConfig) {
+    // 检测是否在本地环境
+    const isLocal = this.isLocalEnvironment();
+    
+    // 本地环境直连 Bridge，外网环境使用代理
+    const defaultUrl = isLocal 
+      ? 'http://localhost:12394' 
+      : `${window.location.origin}/api/bridge`;
+    
     this.config = {
-      bridgeUrl: config.bridgeUrl || 'http://localhost:12394'
+      bridgeUrl: config.bridgeUrl || defaultUrl
     };
+    
+    console.log(`[BridgeConnector] 环境: ${isLocal ? '本地' : '外网'}, URL: ${this.config.bridgeUrl}`);
+  }
+  
+  private isLocalEnvironment(): boolean {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || 
+           hostname === '127.0.0.1' || 
+           hostname.startsWith('192.168.') ||
+           hostname.startsWith('10.') ||
+           hostname.endsWith('.local');
   }
 
   /**
