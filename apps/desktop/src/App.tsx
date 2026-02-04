@@ -11,6 +11,7 @@ import { SceneDirectorPanel } from './components/SceneDirectorPanel';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
+import { sceneDirector, type SceneElements, type SceneMode } from './lib/SceneDirectorSystem';
 import { lipSyncDriver } from './lib/LipSyncDriver';
 import { performanceMonitor } from './lib/PerformanceMonitor';
 import { config, updateConfig, resetConfig } from './stores/configStore';
@@ -41,9 +42,27 @@ function App() {
   // 当前模型路径
   const [modelPath, setModelPath] = createSignal(config().modelPath);
   
+  // SOTA Round 40: 场景导演状态
+  const [sceneMode, setSceneMode] = createSignal<SceneMode>('casual_chat');
+  const [sceneElements, setSceneElements] = createSignal<SceneElements>(sceneDirector.getCurrentElements());
+  
   // 初始化主题
   onMount(() => {
     initTheme();
+    
+    // 订阅场景导演状态变化
+    const unsubScene = sceneDirector.onStateChange((state) => {
+      setSceneMode(state.currentMode);
+      setSceneElements(state.elements);
+    });
+    
+    // 启动自动时间检测
+    sceneDirector.startAutoTimeDetection();
+    
+    onCleanup(() => {
+      unsubScene();
+      sceneDirector.stopAutoTimeDetection();
+    });
   });
   
   // Avatar 加载完成
@@ -238,19 +257,24 @@ function App() {
       <div class={`app-main ${config().chatPosition === 'left' ? 'app-main--chat-left' : ''}`}>
         {/* Avatar 舞台 */}
         <section class="avatar-stage">
-          {/* 情绪驱动背景 */}
+          {/* 情绪驱动背景 - 场景导演控制 */}
           <EmotionBackground
             emotion={systemState().currentEmotion}
-            enabled={config().enableBackground ?? true}
-            intensity={1.0}
+            enabled={(config().enableBackground ?? true) && sceneElements().background.enabled}
+            intensity={sceneElements().background.intensity}
+            colorShift={sceneElements().background.colorShift}
+            brightness={sceneElements().lighting.brightness}
+            warmth={sceneElements().lighting.warmth}
+            vignette={sceneElements().lighting.vignette}
             showControls={showDevPanel()}
           />
           
-          {/* 情绪粒子特效 */}
+          {/* 情绪粒子特效 - 场景导演控制 */}
           <EmotionParticles
             emotion={systemState().currentEmotion}
-            intensity={1.0}
-            enabled={config().enableParticles ?? true}
+            intensity={sceneElements().particles.intensity}
+            speed={sceneElements().particles.speed}
+            enabled={(config().enableParticles ?? true) && sceneElements().particles.enabled}
             showControls={showDevPanel()}
             showCounter={showDevPanel()}
           />

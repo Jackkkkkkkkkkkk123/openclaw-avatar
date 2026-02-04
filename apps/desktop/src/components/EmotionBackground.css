@@ -240,3 +240,19 @@
     animation: none;
   }
 }
+
+/* SOTA Round 40: 场景导演滤镜层 */
+.emotion-background__scene-filter {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  transition: filter 800ms ease-in-out;
+}
+
+/* 动态暗角强度 */
+.emotion-background__vignette {
+  opacity: var(--vignette-opacity, 0.3);
+}

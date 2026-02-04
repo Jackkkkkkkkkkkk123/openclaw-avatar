@@ -365,6 +365,7 @@ export class EmotionParticleSystem {
   private callbacks: Set<ParticleCallback> = new Set();
   private enabled = true;
   private intensity = 1.0; // 粒子强度 (0-2)
+  private speedMultiplier = 1.0; // SOTA Round 40: 速度倍数 (0-2)
   private containerWidth = 800;
   private containerHeight = 600;
   private isRunning = false;
@@ -421,6 +422,20 @@ export class EmotionParticleSystem {
    */
   setIntensity(intensity: number): void {
     this.intensity = Math.max(0, Math.min(2, intensity));
+  }
+
+  /**
+   * SOTA Round 40: 设置速度倍数
+   */
+  setSpeed(speed: number): void {
+    this.speedMultiplier = Math.max(0, Math.min(2, speed));
+  }
+
+  /**
+   * 获取当前速度倍数
+   */
+  getSpeed(): number {
+    return this.speedMultiplier;
   }
 
   /**
@@ -584,19 +599,20 @@ export class EmotionParticleSystem {
    */
   private updateParticles(deltaTime: number): void {
     const dt = deltaTime / 16;
+    const speed = this.speedMultiplier; // SOTA Round 40: 应用速度倍数
 
     this.particles = this.particles.filter(p => {
       // 更新生命
       p.life += deltaTime;
       if (p.life >= p.maxLife) return false;
 
-      // 更新位置
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      // 更新位置 (应用速度倍数)
+      p.x += p.vx * dt * speed;
+      p.y += p.vy * dt * speed;
 
-      // 应用重力
+      // 应用重力 (应用速度倍数)
       if (this.currentConfig) {
-        p.vy += this.currentConfig.gravity * dt;
+        p.vy += this.currentConfig.gravity * dt * speed;
       }
 
       // 更新旋转

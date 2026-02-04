@@ -21,7 +21,12 @@ interface EmotionBackgroundProps {
   emotion: Expression;
   enabled?: boolean;
   showControls?: boolean;
-  intensity?: number;  // 0-2, 默认 1
+  intensity?: number;       // 0-2, 默认 1
+  // SOTA Round 40: 场景导演控制
+  colorShift?: number;      // -1 到 1, 色调偏移 (冷-暖)
+  brightness?: number;      // 0-2, 亮度
+  warmth?: number;          // -1 到 1, 色温
+  vignette?: number;        // 0-1, 暗角强度
 }
 
 export function EmotionBackground(props: EmotionBackgroundProps) {
@@ -163,8 +168,29 @@ export function EmotionBackground(props: EmotionBackgroundProps) {
         />
       </Show>
       
-      {/* 边缘渐变（让角色更突出） */}
-      <div class="emotion-background__vignette" />
+      {/* 边缘渐变（让角色更突出）- 场景导演控制强度 */}
+      <div 
+        class="emotion-background__vignette" 
+        style={{
+          '--vignette-opacity': props.vignette ?? 0.3,
+        }}
+      />
+      
+      {/* SOTA Round 40: 场景导演滤镜层 */}
+      <div 
+        class="emotion-background__scene-filter"
+        style={{
+          '--scene-brightness': props.brightness ?? 1,
+          '--scene-warmth': props.warmth ?? 0,
+          '--scene-colorshift': props.colorShift ?? 0,
+          filter: `
+            brightness(${props.brightness ?? 1})
+            saturate(${1 + Math.abs(props.colorShift ?? 0) * 0.3})
+            sepia(${Math.max(0, (props.warmth ?? 0) * 0.3)})
+            hue-rotate(${(props.colorShift ?? 0) * 15}deg)
+          `.trim(),
+        }}
+      />
       
       {/* 控制面板 */}
       <Show when={props.showControls}>

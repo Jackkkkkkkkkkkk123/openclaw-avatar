@@ -15,6 +15,7 @@ import './EmotionParticles.css';
 interface EmotionParticlesProps {
   emotion: Expression;
   intensity?: number;
+  speed?: number;         // SOTA Round 40: 场景导演速度控制
   enabled?: boolean;
   showControls?: boolean;
   showCounter?: boolean;
@@ -74,6 +75,13 @@ export function EmotionParticles(props: EmotionParticlesProps) {
   createEffect(() => {
     if (props.intensity !== undefined) {
       emotionParticleSystem.setIntensity(props.intensity);
+    }
+  });
+  
+  // SOTA Round 40: 同步速度
+  createEffect(() => {
+    if (props.speed !== undefined) {
+      emotionParticleSystem.setSpeed(props.speed);
     }
   });
   
