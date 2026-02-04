@@ -190,11 +190,12 @@ export class OpenClawConnector {
 
   /**
    * 发送 connect 请求
+   * 使用 openclaw-control-ui / webchat 模式，与 OpenClaw Control UI 相同
    */
   private async sendConnect(): Promise<void> {
     const connectId = generateId();
     
-    // 使用 "cli" 作为 client.id 和 client.mode，这是 OpenClaw 认可的客户端类型
+    // 使用与 Control UI 相同的客户端参数
     const connectRequest = {
       type: 'req',
       id: connectId,
@@ -203,23 +204,20 @@ export class OpenClawConnector {
         minProtocol: PROTOCOL_VERSION,
         maxProtocol: PROTOCOL_VERSION,
         client: {
-          id: 'cli',  // 必须使用预定义的客户端 ID
-          version: '0.1.0',
-          platform: 'web',
-          mode: 'cli'  // 必须与 id 匹配
+          id: 'openclaw-control-ui',  // Control UI 客户端 ID
+          version: '1.0.0',
+          platform: typeof navigator !== 'undefined' ? navigator.platform || 'web' : 'web',
+          mode: 'webchat',  // webchat 模式
+          instanceId: `avatar-${getDeviceId()}`  // 唯一实例 ID
         },
-        role: 'operator',
-        scopes: ['operator.read', 'operator.write'],
+        // Control UI 模式不需要 role、scopes、commands、permissions
+        scopes: [],
         caps: [],
-        commands: [],
-        permissions: {},
         auth: {
           token: this.config.token || undefined,
           deviceToken: this.deviceToken || undefined
         },
-        locale: navigator.language || 'zh-CN',
-        userAgent: 'openclaw-avatar/0.1.0'
-        // 本地连接不需要 device 签名
+        locale: typeof navigator !== 'undefined' ? navigator.language || 'zh-CN' : 'zh-CN'
       }
     };
 

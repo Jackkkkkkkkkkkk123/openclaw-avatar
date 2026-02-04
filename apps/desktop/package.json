@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "puppeteer": "^24.36.1",
     "terser": "^5.46.0",
     "typescript": "^5.8.0",
     "vite": "^6.0.3",

@@ -76,8 +76,8 @@ export class AvatarSystem {
       sensitivity: 1.2,
     });
 
-    // 初始化 TTS
-    if (this.config.fishApiKey && this.config.enableTTS) {
+    // 初始化 TTS (API Key 已内置)
+    if (this.config.enableTTS) {
       this.ttsService = createTTSService(this.config.fishApiKey);
     }
 

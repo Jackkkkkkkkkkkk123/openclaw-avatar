@@ -208,15 +208,16 @@ export class TTSService {
 
 /**
  * 创建 TTS 服务实例
- * 
- * 注意：需要在运行时提供 API Key
  */
-export function createTTSService(apiKey: string): TTSService {
+export function createTTSService(apiKey?: string): TTSService {
   return new TTSService({
     apiEndpoint: 'https://api.fish.audio/v1/tts',
-    apiKey,
-    referenceId: 'ceea7f5420dc4214807f4ce5dccb9da3', // TOOLS.md 中的克隆音色
+    apiKey: apiKey || 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
+    referenceId: '9dec9671824543b4a4f9f382dbf15748', // 初音克隆音色
     model: 's1',
     format: 'mp3',
   });
 }
+
+// 预配置的默认 TTS 服务实例
+export const ttsService = createTTSService();
