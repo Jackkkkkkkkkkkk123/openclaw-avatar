@@ -21,9 +21,9 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  gatewayUrl: 'ws://localhost:18789/ws',
-  gatewayToken: '', // 从环境或 OpenClaw 配置获取
-  fishApiKey: '',
+  gatewayUrl: 'wss://miku.sngxai.com/ws',
+  gatewayToken: '', // 可选，用于身份验证
+  fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',
   modelName: 'Lain',
