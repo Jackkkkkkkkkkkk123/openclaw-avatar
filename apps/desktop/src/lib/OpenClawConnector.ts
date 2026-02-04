@@ -544,8 +544,23 @@ export class OpenClawConnector {
   }
 }
 
-// 默认实例（从配置读取）
-export const openClawConnector = new OpenClawConnector({
-  gatewayUrl: 'ws://localhost:18789/ws',
-  // token 会从配置存储中读取
-});
+// 默认实例（延迟创建，避免在模块加载时访问 localStorage）
+let _openClawConnector: OpenClawConnector | null = null;
+
+export function getOpenClawConnector(): OpenClawConnector {
+  if (!_openClawConnector) {
+    _openClawConnector = new OpenClawConnector({
+      gatewayUrl: 'ws://localhost:18789/ws',
+      // token 会从配置存储中读取
+    });
+  }
+  return _openClawConnector;
+}
+
+// 向后兼容：提供 getter 形式的默认导出
+// @deprecated 使用 getOpenClawConnector() 代替
+export const openClawConnector = {
+  get instance() {
+    return getOpenClawConnector();
+  }
+};
