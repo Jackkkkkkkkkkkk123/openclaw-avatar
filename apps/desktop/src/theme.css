@@ -1,177 +1,271 @@
-/* 🎨 OpenClaw Avatar - SOTA 级别主题系统
- * 设计风格: Glassmorphism + 初音未来 Cyber Aesthetic
- * 基于 SuperDesign Skill 指南
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+   🎨 OpenClaw Avatar — Ultimate Art Direction
+   ═══════════════════════════════════════════════════════════════════════════
+   
+   Design Philosophy: Jobs × Cyber Aesthetic
+   Style: Retro-Futuristic meets Luxury/Refined
+   
+   "Design is not just what it looks like and feels like. 
+    Design is how it works." — Steve Jobs
+   
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ========================================
-   🎯 设计系统 Token
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Typography — Premium Font Stack (NO Inter/Roboto/Arial)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=General+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* Cabinet Grotesk Alternative: Space Grotesk (similar geometric, free) */
+/* General Sans for body text */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design Tokens — The DNA of Visual Language
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* 🎨 主色调 - 初音未来 Cyber Teal */
-  --primary: oklch(0.75 0.15 180);
-  --primary-dark: oklch(0.65 0.15 180);
-  --primary-light: oklch(0.85 0.12 180);
-  --primary-glow: oklch(0.75 0.15 180 / 0.4);
+  /* ─────────────────────────────────────────────────────────────────────────
+     Typography Scale (Golden Ratio: 1.618)
+     ───────────────────────────────────────────────────────────────────────── */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'General Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', 'SF Mono', Consolas, monospace;
   
-  /* 💜 辅助色 - 未来紫 */
-  --accent: oklch(0.70 0.18 300);
-  --accent-light: oklch(0.80 0.15 300);
-  --accent-glow: oklch(0.70 0.18 300 / 0.3);
+  --text-xs: 0.694rem;     /* 11.1px */
+  --text-sm: 0.833rem;     /* 13.3px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.2rem;       /* 19.2px */
+  --text-xl: 1.44rem;      /* 23px */
+  --text-2xl: 1.728rem;    /* 27.6px */
+  --text-3xl: 2.074rem;    /* 33.2px */
+  --text-4xl: 2.488rem;    /* 39.8px */
+  --text-5xl: 2.986rem;    /* 47.8px */
+  --text-6xl: 3.583rem;    /* 57.3px */
   
-  /* 🌈 渐变 */
-  --gradient-primary: linear-gradient(135deg, var(--primary), var(--accent));
-  --gradient-glow: linear-gradient(135deg, var(--primary-glow), var(--accent-glow));
-  --gradient-mesh: 
-    radial-gradient(at 40% 20%, oklch(0.75 0.15 180 / 0.15) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, oklch(0.70 0.18 300 / 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, oklch(0.60 0.12 220 / 0.08) 0px, transparent 50%);
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
   
-  /* 📐 间距系统 (4px base) */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
-  
-  /* 📝 字体 */
-  --font-sans: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-display: 'Outfit', 'Inter', sans-serif;
-  
-  /* 📏 字号 */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
-  --text-4xl: 2.5rem;
-  
-  /* 🔲 圆角 */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Spacing System (8px base, geometric progression)
+     ───────────────────────────────────────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.5rem;    /* 24px */
+  --space-6: 2rem;      /* 32px */
+  --space-7: 2.5rem;    /* 40px */
+  --space-8: 3rem;      /* 48px */
+  --space-9: 4rem;      /* 64px */
+  --space-10: 5rem;     /* 80px */
+  --space-11: 6rem;     /* 96px */
+  --space-12: 8rem;     /* 128px */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Border Radius (Soft but not childish)
+     ───────────────────────────────────────────────────────────────────────── */
+  --radius-none: 0;
+  --radius-sm: 0.375rem;   /* 6px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-2xl: 1.5rem;    /* 24px */
+  --radius-3xl: 2rem;      /* 32px */
   --radius-full: 9999px;
-  
-  /* ⏱️ 动画 */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     Animation Timing (Purposeful, not decorative)
+     ───────────────────────────────────────────────────────────────────────── */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  
+  --duration-instant: 50ms;
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  --duration-glacial: 1000ms;
 }
 
-/* ========================================
-   🌙 深色主题 (默认)
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   🌙 Dark Theme — The Primary Experience
+   ═══════════════════════════════════════════════════════════════════════════
+   
+   Color Philosophy:
+   - Deep, rich blacks (not #000000 — too harsh)
+   - Signature cyan-teal accent (Miku heritage)
+   - Holographic secondary accents
+   - Restrained, purposeful use of color
+   
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 :root,
 [data-theme="dark"] {
-  /* 背景 */
-  --bg: oklch(0.12 0.01 260);
-  --bg-secondary: oklch(0.15 0.015 260);
-  --bg-tertiary: oklch(0.18 0.02 260);
-  --bg-elevated: oklch(0.20 0.025 260);
+  /* ─────────────────────────────────────────────────────────────────────────
+     Background Layers (Depth through subtle variation)
+     ───────────────────────────────────────────────────────────────────────── */
+  --bg-void: #050508;        /* Deepest layer */
+  --bg-base: #0a0a0f;        /* Primary background */
+  --bg-subtle: #0f0f16;      /* Elevated surfaces */
+  --bg-muted: #16161f;       /* Cards, panels */
+  --bg-emphasis: #1e1e2a;    /* Hover states */
+  --bg-overlay: rgba(5, 5, 8, 0.8);
   
-  /* 玻璃态 */
-  --glass-bg: oklch(0.15 0.02 260 / 0.6);
-  --glass-border: oklch(1 0 0 / 0.08);
-  --glass-highlight: oklch(1 0 0 / 0.05);
+  /* ─────────────────────────────────────────────────────────────────────────
+     Foreground (Text hierarchy through opacity, not color)
+     ───────────────────────────────────────────────────────────────────────── */
+  --fg-default: #f4f4f5;     /* Primary text */
+  --fg-muted: #a1a1aa;       /* Secondary text */
+  --fg-subtle: #71717a;      /* Tertiary text */
+  --fg-faint: #52525b;       /* Disabled, hints */
+  --fg-on-accent: #050508;   /* Text on accent backgrounds */
   
-  /* 文字 */
-  --text: oklch(0.95 0.01 260);
-  --text-secondary: oklch(0.70 0.02 260);
-  --text-muted: oklch(0.50 0.02 260);
-  --text-on-primary: oklch(0.10 0.02 180);
+  /* ─────────────────────────────────────────────────────────────────────────
+     Accent Colors — The Soul of Miku
+     ───────────────────────────────────────────────────────────────────────── */
   
-  /* 边框 */
-  --border: oklch(1 0 0 / 0.08);
-  --border-hover: oklch(1 0 0 / 0.15);
-  --border-focus: var(--primary);
+  /* Primary: Signature Cyan-Teal */
+  --accent-primary: #39d4cf;
+  --accent-primary-hover: #5ee0dc;
+  --accent-primary-muted: rgba(57, 212, 207, 0.15);
+  --accent-primary-subtle: rgba(57, 212, 207, 0.08);
   
-  /* 状态色 */
-  --success: oklch(0.72 0.18 145);
-  --warning: oklch(0.80 0.16 85);
-  --danger: oklch(0.65 0.22 25);
-  --info: oklch(0.70 0.15 230);
+  /* Secondary: Holographic Magenta */
+  --accent-secondary: #e879f9;
+  --accent-secondary-hover: #f0abfc;
+  --accent-secondary-muted: rgba(232, 121, 249, 0.15);
   
-  /* 阴影 */
-  --shadow-sm: 0 2px 8px oklch(0 0 0 / 0.2);
-  --shadow-md: 0 4px 16px oklch(0 0 0 / 0.25);
-  --shadow-lg: 0 8px 32px oklch(0 0 0 / 0.3);
-  --shadow-glow: 0 0 40px var(--primary-glow);
+  /* Tertiary: Electric Blue */
+  --accent-tertiary: #60a5fa;
+  --accent-tertiary-hover: #93c5fd;
+  --accent-tertiary-muted: rgba(96, 165, 250, 0.15);
   
-  /* 舞台 */
-  --stage-bg: linear-gradient(180deg, 
-    oklch(0.14 0.03 260) 0%, 
-    oklch(0.10 0.04 280) 50%,
-    oklch(0.08 0.03 300) 100%
+  /* ─────────────────────────────────────────────────────────────────────────
+     Semantic Colors
+     ───────────────────────────────────────────────────────────────────────── */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+  
+  /* ─────────────────────────────────────────────────────────────────────────
+     Borders & Dividers
+     ───────────────────────────────────────────────────────────────────────── */
+  --border-default: rgba(255, 255, 255, 0.06);
+  --border-muted: rgba(255, 255, 255, 0.03);
+  --border-emphasis: rgba(255, 255, 255, 0.1);
+  --border-accent: rgba(57, 212, 207, 0.3);
+  
+  /* ─────────────────────────────────────────────────────────────────────────
+     Shadows & Glow Effects
+     ───────────────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+  
+  /* Glow effects - the cyber aesthetic */
+  --glow-primary: 0 0 20px rgba(57, 212, 207, 0.3);
+  --glow-primary-lg: 0 0 40px rgba(57, 212, 207, 0.4), 0 0 80px rgba(57, 212, 207, 0.2);
+  --glow-secondary: 0 0 20px rgba(232, 121, 249, 0.3);
+  --glow-holographic: 
+    0 0 20px rgba(57, 212, 207, 0.3),
+    0 0 40px rgba(232, 121, 249, 0.2),
+    0 0 60px rgba(96, 165, 250, 0.1);
+  
+  /* ─────────────────────────────────────────────────────────────────────────
+     Glass Morphism
+     ───────────────────────────────────────────────────────────────────────── */
+  --glass-bg: rgba(15, 15, 22, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-blur: 24px;
+  
+  /* ─────────────────────────────────────────────────────────────────────────
+     Gradients — Holographic DNA
+     ───────────────────────────────────────────────────────────────────────── */
+  --gradient-primary: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  --gradient-holographic: linear-gradient(
+    135deg,
+    var(--accent-primary) 0%,
+    var(--accent-secondary) 50%,
+    var(--accent-tertiary) 100%
   );
-  --stage-glow: radial-gradient(ellipse at 50% 100%, var(--primary-glow), transparent 60%);
+  --gradient-subtle: linear-gradient(
+    180deg,
+    rgba(57, 212, 207, 0.05) 0%,
+    transparent 50%
+  );
+  --gradient-stage: linear-gradient(
+    180deg,
+    var(--bg-base) 0%,
+    var(--bg-void) 100%
+  );
 }
 
-/* ========================================
-   ☀️ 浅色主题
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ☀️ Light Theme — For Those Who Dare
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="light"] {
-  /* 背景 */
-  --bg: oklch(0.98 0.005 260);
-  --bg-secondary: oklch(0.96 0.008 260);
-  --bg-tertiary: oklch(0.93 0.01 260);
-  --bg-elevated: oklch(1 0 0);
+  --bg-void: #ffffff;
+  --bg-base: #fafafa;
+  --bg-subtle: #f4f4f5;
+  --bg-muted: #e4e4e7;
+  --bg-emphasis: #d4d4d8;
+  --bg-overlay: rgba(255, 255, 255, 0.9);
   
-  /* 玻璃态 */
-  --glass-bg: oklch(1 0 0 / 0.7);
-  --glass-border: oklch(0 0 0 / 0.06);
-  --glass-highlight: oklch(1 0 0 / 0.8);
+  --fg-default: #18181b;
+  --fg-muted: #52525b;
+  --fg-subtle: #71717a;
+  --fg-faint: #a1a1aa;
+  --fg-on-accent: #ffffff;
   
-  /* 文字 */
-  --text: oklch(0.20 0.02 260);
-  --text-secondary: oklch(0.45 0.02 260);
-  --text-muted: oklch(0.60 0.02 260);
-  --text-on-primary: oklch(0.98 0.01 180);
+  --accent-primary: #0d9488;
+  --accent-primary-hover: #14b8a6;
+  --accent-primary-muted: rgba(13, 148, 136, 0.1);
   
-  /* 边框 */
-  --border: oklch(0 0 0 / 0.08);
-  --border-hover: oklch(0 0 0 / 0.12);
-  --border-focus: var(--primary);
+  --accent-secondary: #c026d3;
+  --accent-secondary-hover: #d946ef;
+  --accent-secondary-muted: rgba(192, 38, 211, 0.1);
   
-  /* 状态色 */
-  --success: oklch(0.62 0.18 145);
-  --warning: oklch(0.70 0.16 85);
-  --danger: oklch(0.55 0.22 25);
-  --info: oklch(0.60 0.15 230);
+  --border-default: rgba(0, 0, 0, 0.08);
+  --border-muted: rgba(0, 0, 0, 0.04);
+  --border-emphasis: rgba(0, 0, 0, 0.12);
   
-  /* 阴影 */
-  --shadow-sm: 0 2px 8px oklch(0 0 0 / 0.06);
-  --shadow-md: 0 4px 16px oklch(0 0 0 / 0.08);
-  --shadow-lg: 0 8px 32px oklch(0 0 0 / 0.1);
-  --shadow-glow: 0 0 40px oklch(0.75 0.15 180 / 0.2);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   
-  /* 舞台 */
-  --stage-bg: linear-gradient(180deg, 
-    oklch(0.95 0.02 180) 0%, 
-    oklch(0.92 0.03 200) 50%,
-    oklch(0.90 0.04 220) 100%
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  
+  --glow-primary: 0 0 20px rgba(13, 148, 136, 0.2);
+  --glow-primary-lg: 0 0 40px rgba(13, 148, 136, 0.3);
+  
+  --gradient-stage: linear-gradient(
+    180deg,
+    var(--bg-subtle) 0%,
+    var(--bg-base) 100%
   );
-  --stage-glow: radial-gradient(ellipse at 50% 100%, oklch(0.75 0.15 180 / 0.15), transparent 60%);
 }
 
-/* ========================================
-   🔧 基础重置
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Base Reset — Clean Foundation
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -181,98 +275,84 @@
 
 html {
   font-size: 16px;
-  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: var(--text-base);
-  line-height: 1.6;
-  color: var(--text);
-  background: var(--bg);
+  line-height: var(--leading-normal);
+  color: var(--fg-default);
+  background: var(--bg-base);
   min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
-/* 背景网格效果 */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Atmospheric Background — The Stage
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: var(--gradient-mesh);
+  background: 
+    /* Subtle grid */
+    linear-gradient(var(--border-muted) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-muted) 1px, transparent 1px),
+    /* Gradient orbs */
+    radial-gradient(ellipse at 20% 0%, var(--accent-primary-subtle) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, var(--accent-secondary-muted) 0%, transparent 50%);
+  background-size: 
+    60px 60px,
+    60px 60px,
+    100% 100%,
+    100% 100%;
+  opacity: 0.5;
   pointer-events: none;
   z-index: -1;
 }
 
-/* ========================================
-   🎯 实用类
-   ======================================== */
-
-/* 玻璃态容器 */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  box-shadow: 
-    var(--shadow-md),
-    inset 0 1px 0 var(--glass-highlight);
-}
-
-.glass-subtle {
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-}
-
-/* 发光效果 */
-.glow {
-  box-shadow: var(--shadow-glow);
-}
-
-.glow-text {
-  text-shadow: 0 0 20px var(--primary-glow);
-}
-
-/* 渐变文字 */
-.gradient-text {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* 霓虹边框 */
-.neon-border {
-  position: relative;
-}
-
-.neon-border::before {
+/* Scanline effect — subtle CRT nostalgia */
+body::after {
   content: '';
-  position: absolute;
-  inset: -2px;
-  background: var(--gradient-primary);
-  border-radius: inherit;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-out);
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.3;
 }
 
-.neon-border:hover::before {
-  opacity: 1;
-  filter: blur(8px);
+/* ═══════════════════════════════════════════════════════════════════════════
+   Selection & Focus States
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: var(--accent-primary-muted);
+  color: var(--fg-default);
 }
 
-/* ========================================
-   📜 滚动条
-   ======================================== */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scrollbar — Refined, Not Distracting
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -280,121 +360,91 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
+  background: var(--fg-faint);
   border-radius: var(--radius-full);
-  border: 2px solid transparent;
-  background-clip: content-box;
+  border: 3px solid var(--bg-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-  background-clip: content-box;
+  background: var(--fg-subtle);
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--text-muted) transparent;
+  scrollbar-color: var(--fg-faint) transparent;
 }
 
-/* ========================================
-   🎯 选中与焦点
-   ======================================== */
-
-::selection {
-  background: oklch(0.75 0.15 180 / 0.3);
-  color: var(--text);
-}
-
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-/* ========================================
-   🔗 链接
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Links
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 a {
-  color: var(--primary);
+  color: var(--accent-primary);
   text-decoration: none;
   transition: color var(--duration-fast) var(--ease-out);
 }
 
 a:hover {
-  color: var(--primary-light);
+  color: var(--accent-primary-hover);
 }
 
-/* ========================================
-   🎬 动画关键帧
-   ======================================== */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Utility Classes
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-@keyframes pulse {
-  0%, 100% { 
-    opacity: 1; 
-    transform: scale(1); 
-  }
-  50% { 
-    opacity: 0.7; 
-    transform: scale(1.05); 
-  }
+/* Glass morphism container */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
 }
 
-@keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px var(--primary-glow);
-  }
-  50% {
-    box-shadow: 0 0 40px var(--primary-glow), 0 0 60px var(--accent-glow);
-  }
+/* Gradient text */
+.text-gradient {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+.text-gradient-holographic {
+  background: var(--gradient-holographic);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+/* Glow effects */
+.glow {
+  box-shadow: var(--glow-primary);
 }
+
+.glow-lg {
+  box-shadow: var(--glow-primary-lg);
+}
+
+.glow-holographic {
+  box-shadow: var(--glow-holographic);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Keyframe Animations — Purposeful Motion
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @keyframes fade-in {
-  from { 
-    opacity: 0; 
-  }
-  to { 
-    opacity: 1; 
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes slide-up {
+@keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 
@@ -409,42 +459,63 @@ a:hover {
   }
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: var(--glow-primary);
+  }
+  50% {
+    box-shadow: var(--glow-primary-lg);
+  }
 }
 
-/* ========================================
-   ✨ 动画实用类
-   ======================================== */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 
+@keyframes holographic-shift {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(30deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Animation utilities */
 .animate-fade-in {
   animation: fade-in var(--duration-normal) var(--ease-out);
 }
 
-.animate-slide-up {
-  animation: slide-up var(--duration-slow) var(--ease-out);
+.animate-fade-up {
+  animation: fade-up var(--duration-slow) var(--ease-out);
 }
 
 .animate-scale-in {
   animation: scale-in var(--duration-normal) var(--ease-spring);
 }
 
+.animate-pulse-glow {
+  animation: pulse-glow 3s var(--ease-in-out) infinite;
+}
+
+.animate-breathe {
+  animation: breathe 4s var(--ease-in-out) infinite;
+}
+
 .animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-glow {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    oklch(1 0 0 / 0.1),
-    transparent
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  animation: float 6s var(--ease-in-out) infinite;
 }
