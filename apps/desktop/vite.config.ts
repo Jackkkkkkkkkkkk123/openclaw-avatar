@@ -37,6 +37,23 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    // 代理 Fish Audio API 绕过 CORS (开发环境)
+    proxy: {
+      '/api/fish-tts': {
+        target: 'https://api.fish.audio',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/fish-tts/, '/v1/tts'),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            // 转发 Authorization header
+            const auth = req.headers['authorization'];
+            if (auth) {
+              proxyReq.setHeader('Authorization', auth);
+            }
+          });
+        },
+      },
+    },
   },
   
   // 🚀 Phase 5: 性能优化
