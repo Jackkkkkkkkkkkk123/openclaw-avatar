@@ -1,0 +1,259 @@
+/**
+ * GesturePanel Styles
+ */
+
+.gesture-panel {
+  background: var(--panel-bg, rgba(30, 30, 40, 0.9));
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+.gesture-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.gesture-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary, #fff);
+}
+
+.toggle-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  background: var(--btn-secondary, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.toggle-btn:hover:not(:disabled) {
+  background: var(--btn-secondary-hover, rgba(255, 255, 255, 0.2));
+}
+
+.toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-btn.active {
+  background: var(--accent-color, #39c5bb);
+  color: #fff;
+}
+
+.error-message {
+  background: rgba(255, 107, 107, 0.2);
+  border: 1px solid rgba(255, 107, 107, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #ff6b6b;
+  font-size: 14px;
+}
+
+.gesture-status {
+  margin-bottom: 16px;
+}
+
+.current-gesture {
+  background: var(--surface-bg, rgba(255, 255, 255, 0.05));
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 12px;
+}
+
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.waiting .pulse {
+  font-size: 48px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.detected {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.gesture-emoji {
+  font-size: 64px;
+  animation: pop 0.3s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.5); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.gesture-info {
+  flex: 1;
+}
+
+.gesture-name {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.gesture-desc {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.gesture-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+}
+
+.video-toggle {
+  margin-bottom: 12px;
+}
+
+.video-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+}
+
+.video-preview {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-preview video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gesture-history {
+  margin-top: 16px;
+}
+
+.gesture-history h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.gesture-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.gesture-history li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--surface-bg, rgba(255, 255, 255, 0.05));
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.history-emoji {
+  font-size: 20px;
+}
+
+.history-name {
+  flex: 1;
+  color: var(--text-primary, #fff);
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+}
+
+.no-history {
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  font-size: 14px;
+  text-align: center;
+  padding: 16px;
+}
+
+.gesture-guide {
+  margin-top: 16px;
+}
+
+.gesture-guide h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.gesture-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.gesture-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--surface-bg, rgba(255, 255, 255, 0.05));
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.gesture-item:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+}
+
+.item-emoji {
+  font-size: 24px;
+}
+
+.item-name {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  text-align: center;
+}
+
+/* 响应式 */
+@media (max-width: 400px) {
+  .gesture-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .gesture-emoji {
+    font-size: 48px;
+  }
+  
+  .gesture-name {
+    font-size: 16px;
+  }
+}
