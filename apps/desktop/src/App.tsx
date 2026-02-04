@@ -112,6 +112,7 @@ function App() {
     try {
       avatarSystem.updateConfig({
         gatewayUrl: config().gatewayUrl,
+        gatewayToken: config().gatewayToken,
         fishApiKey: config().fishApiKey,
       });
       await avatarSystem.connect();

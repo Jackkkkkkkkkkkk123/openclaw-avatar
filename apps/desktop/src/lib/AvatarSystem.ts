@@ -12,6 +12,7 @@ import { LipSyncDriver } from './LipSyncDriver';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
+  gatewayToken?: string;
   fishApiKey?: string;
   enableTTS?: boolean;
   enableLipSync?: boolean;
@@ -56,6 +57,7 @@ export class AvatarSystem {
   constructor(config: AvatarSystemConfig = {}) {
     this.config = {
       gatewayUrl: config.gatewayUrl ?? 'ws://localhost:18789/ws',
+      gatewayToken: config.gatewayToken ?? '',
       fishApiKey: config.fishApiKey ?? '',
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
@@ -65,6 +67,7 @@ export class AvatarSystem {
     // 初始化连接器
     this.connector = new OpenClawConnector({
       gatewayUrl: this.config.gatewayUrl,
+      token: this.config.gatewayToken,
     });
 
     // 初始化口型同步
@@ -141,6 +144,14 @@ export class AvatarSystem {
     else if (chunk.type === 'error') {
       console.error('[AvatarSystem] 消息错误:', chunk.content);
       this.setEmotion('sad');
+    }
+    else if (chunk.type === 'thinking') {
+      console.log('[AvatarSystem] 思考中:', chunk.content.slice(0, 50));
+      // 思考时显示中性表情
+      this.setEmotion('neutral');
+    }
+    else if (chunk.type === 'tool') {
+      console.log('[AvatarSystem] 工具调用:', chunk.content.slice(0, 100));
     }
   }
 
@@ -298,8 +309,25 @@ export class AvatarSystem {
   /**
    * 发送消息
    */
-  sendMessage(text: string): boolean {
+  async sendMessage(text: string): Promise<boolean> {
     return this.connector.sendMessage(text);
+  }
+
+  /**
+   * 中止当前响应
+   */
+  async abort(): Promise<void> {
+    await this.connector.abort();
+    this.ttsQueue = [];
+    this.isProcessingTTS = false;
+    this.updateState({ isSpeaking: false, processingText: '' });
+  }
+
+  /**
+   * 获取聊天历史
+   */
+  async getHistory(): Promise<unknown[]> {
+    return this.connector.getHistory();
   }
 
   /**
@@ -409,9 +437,34 @@ export class AvatarSystem {
   updateConfig(config: Partial<AvatarSystemConfig>) {
     if (config.fishApiKey && config.fishApiKey !== this.config.fishApiKey) {
       this.ttsService = createTTSService(config.fishApiKey);
+      console.log('[AvatarSystem] TTS 服务已更新');
+    }
+    
+    // 更新连接器配置
+    const connectorUpdates: { token?: string; gatewayUrl?: string } = {};
+    
+    if (config.gatewayToken !== undefined) {
+      connectorUpdates.token = config.gatewayToken;
+    }
+    
+    if (config.gatewayUrl) {
+      connectorUpdates.gatewayUrl = config.gatewayUrl;
+    }
+    
+    if (Object.keys(connectorUpdates).length > 0) {
+      this.connector.updateConfig(connectorUpdates);
+      console.log('[AvatarSystem] 连接器配置已更新:', Object.keys(connectorUpdates));
     }
     
     this.config = { ...this.config, ...config };
+  }
+
+  /**
+   * 设置 Gateway Token (便捷方法)
+   */
+  setGatewayToken(token: string) {
+    this.config.gatewayToken = token;
+    this.connector.setToken(token);
   }
 
   /**

@@ -4,6 +4,7 @@ import { createSignal, createEffect } from 'solid-js';
 export interface AppConfig {
   // 连接配置
   gatewayUrl: string;
+  gatewayToken: string;
   fishApiKey: string;
   
   // 外观配置
@@ -21,6 +22,7 @@ export interface AppConfig {
 
 const DEFAULT_CONFIG: AppConfig = {
   gatewayUrl: 'ws://localhost:18789/ws',
+  gatewayToken: '', // 从环境或 OpenClaw 配置获取
   fishApiKey: '',
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',

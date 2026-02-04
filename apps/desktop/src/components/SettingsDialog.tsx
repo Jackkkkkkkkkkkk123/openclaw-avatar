@@ -19,12 +19,14 @@ export function SettingsDialog(props: SettingsDialogProps) {
   
   // 本地状态（编辑中）
   const [gatewayUrl, setGatewayUrl] = createSignal(config().gatewayUrl);
+  const [gatewayToken, setGatewayToken] = createSignal(config().gatewayToken);
   const [fishApiKey, setFishApiKey] = createSignal(config().fishApiKey);
   
   // 保存连接设置
   function saveConnectionSettings() {
     updateConfig({
       gatewayUrl: gatewayUrl(),
+      gatewayToken: gatewayToken(),
       fishApiKey: fishApiKey(),
     });
   }
@@ -68,8 +70,17 @@ export function SettingsDialog(props: SettingsDialogProps) {
               label="Gateway URL"
               value={gatewayUrl()}
               onValueChange={setGatewayUrl}
-              placeholder="ws://localhost:3939/ws"
+              placeholder="ws://localhost:18789/ws"
               description="OpenClaw Gateway 的 WebSocket 地址"
+            />
+            
+            <TextField
+              label="Gateway Token"
+              type="password"
+              value={gatewayToken()}
+              onValueChange={setGatewayToken}
+              placeholder="输入 Gateway Token (可选)"
+              description="运行 echo $OPENCLAW_GATEWAY_TOKEN 获取"
             />
             
             <div class="settings-row">
@@ -119,7 +130,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
               size="sm"
               onClick={saveConnectionSettings}
             >
-              保存 API Key
+              保存设置
             </Button>
           </div>
         </TabContent>
