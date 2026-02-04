@@ -290,7 +290,7 @@ export class EyeBrowAnimator {
 
     // 微动
     if (this.config.microMovement.enabled) {
-      this.applyMicroMovement(now);
+      this.applyMicroMovement(deltaTime);
     }
 
     // 呼吸联动
@@ -350,8 +350,8 @@ export class EyeBrowAnimator {
     }
   }
 
-  private applyMicroMovement(now: number): void {
-    this.microPhase += (now - this.lastUpdate) / this.config.microMovement.frequency;
+  private applyMicroMovement(deltaTime: number): void {
+    this.microPhase += deltaTime / this.config.microMovement.frequency;
 
     const amplitude = this.config.microMovement.amplitude;
     const asymmetry = this.config.microMovement.asymmetry;
