@@ -111,7 +111,8 @@ describe('EmotionTransitionEngine', () => {
       
       expect(engine.getTransitionProgress()).toBe(0);
       
-      advanceTime(250);
+      // 过渡时间 = max(200, 500 * 0.3) = 200ms，使用 100ms 确保在过渡中
+      advanceTime(100);
       expect(engine.getTransitionProgress()).toBeGreaterThan(0);
       expect(engine.getTransitionProgress()).toBeLessThan(1);
     });
@@ -132,7 +133,8 @@ describe('EmotionTransitionEngine', () => {
       engine.setEmotion('happy');
       engine.start();
       
-      advanceTime(250);
+      // 过渡时间 = max(200, 500 * 0.3) = 200ms，使用 100ms 确保在过渡中
+      advanceTime(100);
       
       const blended = engine.getBlendedState();
       expect(blended.primary).toBe('happy');
