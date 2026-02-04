@@ -4,6 +4,7 @@ import Avatar from './components/Avatar';
 import { ChatPanel, type ChatMessage } from './components/ChatPanel';
 import { SettingsDialog } from './components/SettingsDialog';
 import { DevPanel } from './components/DevPanel';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
@@ -182,6 +183,9 @@ function App() {
   
   return (
     <main class="app">
+      {/* 离线状态指示器 */}
+      <OfflineIndicator />
+      
       {/* 头部 */}
       <header class="app-header">
         <div class="app-header__brand">
