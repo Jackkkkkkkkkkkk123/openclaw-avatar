@@ -242,12 +242,19 @@ export class EmotionPredictionModel {
   }
 
   /**
-   * 批量预测 (异步)
+   * 批量预测 (同步)
    */
-  async predictBatch(texts: string[]): Promise<EmotionPrediction[]> {
+  predictBatch(texts: string[]): EmotionPrediction[] {
+    return texts.map(text => this.predict(text));
+  }
+
+  /**
+   * 批量预测 (异步，使用 LLM)
+   */
+  async predictBatchAsync(texts: string[]): Promise<EmotionPrediction[]> {
     const results: EmotionPrediction[] = [];
     for (const text of texts) {
-      results.push(await this.predict(text));
+      results.push(await this.predictAsync(text));
     }
     return results;
   }

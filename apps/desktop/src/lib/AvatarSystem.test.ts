@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // ========== Hoisted Mocks ==========
 const {
   mockConnector,
+  mockBridgeConnector,
   mockTTSService,
   mockLipSyncDriver,
   mockHeadTrackingService,
@@ -30,6 +31,14 @@ const {
     updateConfig: vi.fn(),
     onStatusChange: vi.fn().mockReturnValue(() => {}),
     onMessage: vi.fn().mockReturnValue(() => {}),
+  },
+  mockBridgeConnector: {
+    connect: vi.fn().mockRejectedValue(new Error('Bridge not available')), // 让 Bridge 失败，回退到 WebSocket
+    disconnect: vi.fn(),
+    sendMessage: vi.fn().mockResolvedValue(true),
+    getStatus: vi.fn().mockReturnValue('disconnected'),
+    onMessage: vi.fn().mockReturnValue(() => {}),
+    onStatusChange: vi.fn().mockReturnValue(() => {}),
   },
   mockTTSService: {
     synthesize: vi.fn().mockResolvedValue({ audioUrl: 'blob:test', text: 'test' }),
@@ -123,6 +132,17 @@ vi.mock('./OpenClawConnector', () => ({
     updateConfig = mockConnector.updateConfig;
     onStatusChange = mockConnector.onStatusChange;
     onMessage = mockConnector.onMessage;
+  },
+}));
+
+vi.mock('./OpenClawBridgeConnector', () => ({
+  OpenClawBridgeConnector: class {
+    connect = mockBridgeConnector.connect;
+    disconnect = mockBridgeConnector.disconnect;
+    sendMessage = mockBridgeConnector.sendMessage;
+    getStatus = mockBridgeConnector.getStatus;
+    onMessage = mockBridgeConnector.onMessage;
+    onStatusChange = mockBridgeConnector.onStatusChange;
   },
 }));
 

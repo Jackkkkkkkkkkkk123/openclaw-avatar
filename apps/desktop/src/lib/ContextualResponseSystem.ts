@@ -171,9 +171,23 @@ export class ContextualResponseSystem {
   }
 
   /**
+   * 处理新的对话轮次 (同步，本地分析，向后兼容)
+   */
+  processTurn(text: string, role: 'user' | 'assistant', emotion?: string): void {
+    this.processTurnInternal(text, role, emotion, false);
+  }
+
+  /**
    * 处理新的对话轮次 (异步，会调用 LLM)
    */
-  async processTurn(text: string, role: 'user' | 'assistant', emotion?: string): Promise<void> {
+  async processTurnAsync(text: string, role: 'user' | 'assistant', emotion?: string): Promise<void> {
+    await this.processTurnInternal(text, role, emotion, true);
+  }
+
+  /**
+   * 内部处理对话轮次
+   */
+  private async processTurnInternal(text: string, role: 'user' | 'assistant', emotion: string | undefined, useLLM: boolean): Promise<void> {
     const turn: ConversationTurn = {
       role,
       text,
@@ -228,13 +242,14 @@ export class ContextualResponseSystem {
     // 通知初步状态
     this.notifyCallbacks();
 
-    // 异步调用 LLM 分析 (如果启用且满足间隔条件)
-    if (this.config.useLLM && 
+    // 异步调用 LLM 分析 (仅在明确请求 LLM 且满足条件时)
+    if (useLLM &&
+        this.config.useLLM && 
         role === 'user' && 
         this.turnsSinceLastLLM >= this.config.llmAnalysisInterval &&
         llmService.isConnected() &&
         !this.isAnalyzing) {
-      this.performLLMAnalysis(text, turn);
+      await this.performLLMAnalysis(text, turn);
     }
   }
 
@@ -327,15 +342,15 @@ export class ContextualResponseSystem {
       suggestion.llmReasoning = llmAnalysis.reasoning;
     }
 
-    // 根据阶段调整
+    // 根据阶段调整 (阶段优先级高于默认情绪)
     switch (this.state.phase) {
       case 'greeting':
-        suggestion.emotion = suggestion.emotion || 'happy';
+        suggestion.emotion = 'happy';
         suggestion.motionHint = 'greeting';
         suggestion.openingPhrases = ['你好呀！', '嗨~', '见到你真开心！'];
         break;
       case 'farewell':
-        suggestion.emotion = suggestion.emotion || 'calm';
+        suggestion.emotion = 'calm';
         suggestion.motionHint = 'wave';
         suggestion.openingPhrases = ['再见~', '下次再聊！', '期待下次见面！'];
         break;
@@ -351,19 +366,19 @@ export class ContextualResponseSystem {
         break;
     }
 
-    // 根据用户意图调整
+    // 根据用户意图调整 (意图优先级高于阶段)
     const recentIntent = this.state.userIntents[this.state.userIntents.length - 1];
     if (recentIntent === 'share_feeling') {
-      suggestion.emotion = suggestion.emotion || this.mirrorEmotion();
+      suggestion.emotion = this.mirrorEmotion() || suggestion.emotion;
       suggestion.styleAdjustments.empathy = 0.9;
       suggestion.motionHint = 'nod';
     } else if (recentIntent === 'seek_help') {
-      suggestion.emotion = suggestion.emotion || 'thinking';
+      suggestion.emotion = 'thinking';
       suggestion.styleAdjustments.enthusiasm = 0.8;
       suggestion.motionHint = 'thinking';
     }
 
-    // 根据话题调整
+    // 根据话题调整 (话题 emotion 只在无强制值时生效)
     if (this.state.currentTopic === 'emotion') {
       suggestion.styleAdjustments.empathy = Math.max(
         suggestion.styleAdjustments.empathy || 0, 
@@ -371,7 +386,10 @@ export class ContextualResponseSystem {
       );
     } else if (this.state.currentTopic === 'creative') {
       suggestion.styleAdjustments.enthusiasm = 0.9;
-      suggestion.emotion = suggestion.emotion || 'excited';
+      // 创意话题应该表现出兴奋
+      if (!suggestion.emotion || suggestion.emotion === 'neutral') {
+        suggestion.emotion = 'excited';
+      }
     }
 
     return suggestion;
