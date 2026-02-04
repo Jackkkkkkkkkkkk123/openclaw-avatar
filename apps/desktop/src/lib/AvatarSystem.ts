@@ -21,6 +21,8 @@ import { expressionSequencer, analyzeTextForSequence } from './ExpressionSequenc
 import { emotionContextEngine, type ConversationTone } from './EmotionContextEngine';
 import { headTrackingService, type TrackingData } from './HeadTrackingService';
 import { keyboardShortcuts, formatShortcut } from './KeyboardShortcuts';
+import { gestureRecognitionService, type GestureResult } from './GestureRecognitionService';
+import { gestureReactionMapper, type GestureReaction } from './GestureReactionMapper';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -39,6 +41,9 @@ export interface SystemState {
   processingText: string;
   isHeadTrackingActive: boolean;
   headTrackingSupported: boolean;
+  isGestureRecognitionActive: boolean;
+  lastGesture: string | null;
+  lastGestureMessage: string | null;
 }
 
 type StateChangeCallback = (state: SystemState) => void;
@@ -61,10 +66,17 @@ export class AvatarSystem {
     processingText: '',
     isHeadTrackingActive: false,
     headTrackingSupported: false,
+    isGestureRecognitionActive: false,
+    lastGesture: null,
+    lastGestureMessage: null,
   };
   
   // 头部追踪取消订阅函数
   private headTrackingUnsubscribe: (() => void) | null = null;
+
+  // 手势识别取消订阅函数
+  private gestureRecognitionUnsubscribe: (() => void) | null = null;
+  private gestureReactionUnsubscribe: (() => void) | null = null;
 
   // 情绪恢复定时器
   private emotionResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -811,6 +823,103 @@ export class AvatarSystem {
     return formatShortcut(keys);
   }
 
+  // ========== 手势识别 API ==========
+
+  /**
+   * 启动手势识别
+   */
+  async startGestureRecognition(): Promise<void> {
+    try {
+      // 初始化并启动手势识别
+      const success = await gestureRecognitionService.start();
+      
+      if (!success) {
+        throw new Error('手势识别启动失败');
+      }
+      
+      // 订阅手势事件
+      this.gestureRecognitionUnsubscribe = gestureRecognitionService.onGesture((result: GestureResult) => {
+        this.handleGestureResult(result);
+      });
+      
+      // 订阅反应事件
+      this.gestureReactionUnsubscribe = gestureReactionMapper.onReaction((gesture, reaction, message) => {
+        this.updateState({
+          lastGesture: gesture,
+          lastGestureMessage: message || null,
+        });
+      });
+      
+      this.updateState({ isGestureRecognitionActive: true });
+      console.log('[AvatarSystem] ✅ 手势识别已启动');
+    } catch (err) {
+      console.error('[AvatarSystem] 手势识别启动失败:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * 停止手势识别
+   */
+  stopGestureRecognition(): void {
+    if (this.gestureRecognitionUnsubscribe) {
+      this.gestureRecognitionUnsubscribe();
+      this.gestureRecognitionUnsubscribe = null;
+    }
+    
+    if (this.gestureReactionUnsubscribe) {
+      this.gestureReactionUnsubscribe();
+      this.gestureReactionUnsubscribe = null;
+    }
+    
+    gestureRecognitionService.stop();
+    this.updateState({ 
+      isGestureRecognitionActive: false,
+      lastGesture: null,
+      lastGestureMessage: null,
+    });
+    console.log('[AvatarSystem] 手势识别已停止');
+  }
+
+  /**
+   * 处理手势识别结果
+   */
+  private handleGestureResult(result: GestureResult): void {
+    // 使用 GestureReactionMapper 处理手势
+    gestureReactionMapper.react(result.gesture);
+    
+    console.log('[AvatarSystem] 检测到手势:', result.gesture, '置信度:', result.confidence);
+  }
+
+  /**
+   * 获取手势识别状态
+   */
+  getGestureRecognitionStatus(): { 
+    active: boolean; 
+    lastGesture: string | null;
+    lastMessage: string | null;
+  } {
+    return {
+      active: this.state.isGestureRecognitionActive,
+      lastGesture: this.state.lastGesture,
+      lastMessage: this.state.lastGestureMessage,
+    };
+  }
+
+  /**
+   * 设置手势反应启用状态
+   */
+  setGestureReactionEnabled(enabled: boolean): void {
+    gestureReactionMapper.setEnabled(enabled);
+  }
+
+  /**
+   * 自定义手势反应
+   */
+  setGestureReaction(gesture: string, reaction: GestureReaction): void {
+    gestureReactionMapper.setReaction(gesture as any, reaction);
+  }
+
   /**
    * 销毁
    */
@@ -823,6 +932,11 @@ export class AvatarSystem {
     // 停止头部追踪
     this.stopHeadTracking();
     headTrackingService.destroy();
+    
+    // 停止手势识别
+    this.stopGestureRecognition();
+    gestureRecognitionService.destroy();
+    gestureReactionMapper.destroy();
     
     // 销毁键盘快捷键
     keyboardShortcuts.destroy();
