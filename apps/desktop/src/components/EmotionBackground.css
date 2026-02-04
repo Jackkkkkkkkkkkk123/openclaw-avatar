@@ -1,0 +1,242 @@
+/**
+ * EmotionBackground 样式
+ * 
+ * 情绪驱动背景的视觉效果
+ */
+
+.emotion-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.emotion-background--disabled {
+  opacity: 0;
+}
+
+/* 主渐变背景 */
+.emotion-background__gradient {
+  position: absolute;
+  inset: 0;
+  transition: background var(--transition-duration, 800ms) var(--transition-easing, ease-in-out);
+}
+
+.emotion-background--transitioning .emotion-background__gradient {
+  /* 过渡中的动画效果 */
+}
+
+/* 光效层 */
+.emotion-background__glows {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.emotion-background__glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  transition: 
+    left var(--transition-duration, 800ms) var(--transition-easing, ease-in-out),
+    top var(--transition-duration, 800ms) var(--transition-easing, ease-in-out),
+    width var(--transition-duration, 800ms) var(--transition-easing, ease-in-out),
+    height var(--transition-duration, 800ms) var(--transition-easing, ease-in-out),
+    background var(--transition-duration, 800ms) var(--transition-easing, ease-in-out);
+}
+
+/* 波浪层 */
+.emotion-background__waves {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.emotion-background__wave {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 200px;
+  border-radius: 50%;
+  filter: blur(30px);
+  transition: 
+    bottom 0.1s linear,
+    opacity var(--transition-duration, 800ms) var(--transition-easing, ease-in-out);
+}
+
+/* 覆盖层 */
+.emotion-background__overlay {
+  position: absolute;
+  inset: 0;
+  transition: 
+    background var(--transition-duration, 800ms) var(--transition-easing, ease-in-out),
+    opacity var(--transition-duration, 800ms) var(--transition-easing, ease-in-out);
+}
+
+/* 边缘渐变（聚焦效果） */
+.emotion-background__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    rgba(0, 0, 0, 0.3) 70%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  pointer-events: none;
+}
+
+/* 控制面板 */
+.emotion-background__controls {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  color: white;
+  pointer-events: all;
+  z-index: 10;
+}
+
+.emotion-background__label {
+  opacity: 0.8;
+  text-transform: capitalize;
+}
+
+.emotion-background__toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 2px 8px;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.emotion-background__toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 动画关键帧 */
+@keyframes glow-pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes wave-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* 特殊情绪效果 */
+
+/* 开心 - 微微发光的边缘 */
+.emotion-background[data-emotion="happy"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(255, 182, 193, 0.1) 70%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+/* 悲伤 - 更深的阴影 */
+.emotion-background[data-emotion="sad"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 20%,
+    rgba(0, 0, 50, 0.3) 60%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+/* 惊讶 - 电光边缘 */
+.emotion-background[data-emotion="surprised"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 255, 255, 0.05) 60%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* 生气 - 红色边缘 */
+.emotion-background[data-emotion="angry"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 25%,
+    rgba(139, 0, 0, 0.2) 60%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+}
+
+/* 恋爱 - 粉色心动边缘 */
+.emotion-background[data-emotion="loving"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(255, 105, 180, 0.15) 70%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+/* 兴奋 - 彩虹光晕 */
+.emotion-background[data-emotion="excited"] .emotion-background__vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(255, 20, 147, 0.08) 50%,
+    rgba(255, 215, 0, 0.05) 65%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
+}
+
+/* 响应式适配 */
+@media (max-width: 600px) {
+  .emotion-background__glow {
+    filter: blur(40px);
+  }
+  
+  .emotion-background__wave {
+    filter: blur(20px);
+  }
+  
+  .emotion-background__controls {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .emotion-background__gradient,
+  .emotion-background__glow,
+  .emotion-background__wave,
+  .emotion-background__overlay {
+    transition: none;
+  }
+  
+  .emotion-background__glow {
+    animation: none;
+  }
+}

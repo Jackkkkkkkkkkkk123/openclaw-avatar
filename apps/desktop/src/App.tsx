@@ -6,6 +6,7 @@ import { SettingsDialog } from './components/SettingsDialog';
 import { DevPanel } from './components/DevPanel';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { EmotionParticles } from './components/EmotionParticles';
+import { EmotionBackground } from './components/EmotionBackground';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
@@ -220,6 +221,14 @@ function App() {
       <div class={`app-main ${config().chatPosition === 'left' ? 'app-main--chat-left' : ''}`}>
         {/* Avatar 舞台 */}
         <section class="avatar-stage">
+          {/* 情绪驱动背景 */}
+          <EmotionBackground
+            emotion={systemState().currentEmotion}
+            enabled={config().enableBackground ?? true}
+            intensity={1.0}
+            showControls={showDevPanel()}
+          />
+          
           {/* 情绪粒子特效 */}
           <EmotionParticles
             emotion={systemState().currentEmotion}
@@ -344,6 +353,12 @@ function App() {
               <div class="control-group">
                 <h4>特效</h4>
                 <div class="control-buttons">
+                  <Button 
+                    active={config().enableBackground}
+                    onClick={() => updateConfig({ enableBackground: !config().enableBackground })}
+                  >
+                    🌈 动态背景 {config().enableBackground ? '开' : '关'}
+                  </Button>
                   <Button 
                     active={config().enableParticles}
                     onClick={() => updateConfig({ enableParticles: !config().enableParticles })}
