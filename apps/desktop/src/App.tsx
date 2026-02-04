@@ -9,7 +9,9 @@ import { EmotionParticles } from './components/EmotionParticles';
 import { EmotionBackground } from './components/EmotionBackground';
 import { DynamicLighting } from './components/DynamicLighting';
 import { SceneDirectorPanel } from './components/SceneDirectorPanel';
+import { CapturePanel } from './components/CapturePanel';
 import { Button } from './components/ui';
+import { getAvatarCaptureSystem } from './lib/AvatarCaptureSystem';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
 import { sceneDirector, type SceneElements, type SceneMode } from './lib/SceneDirectorSystem';
@@ -76,6 +78,12 @@ function App() {
   function handleAvatarReady() {
     setAvatarReady(true);
     setStatusMessage('Avatar 已就绪');
+    
+    // SOTA Round 44: 绑定 Canvas 到截图系统
+    const avatarCanvas = document.querySelector('.avatar-canvas canvas') as HTMLCanvasElement;
+    if (avatarCanvas) {
+      getAvatarCaptureSystem().bindCanvas(avatarCanvas);
+    }
     
     // 订阅系统状态
     avatarSystem.onStateChange((state) => {
@@ -478,6 +486,13 @@ function App() {
       <Show when={showDevPanel()}>
         <div class="scene-director-wrapper">
           <SceneDirectorPanel />
+        </div>
+      </Show>
+      
+      {/* SOTA Round 44: 截图 & 录制面板 */}
+      <Show when={avatarReady()}>
+        <div class="capture-panel-wrapper">
+          <CapturePanel compact={!showDevPanel()} />
         </div>
       </Show>
     </main>

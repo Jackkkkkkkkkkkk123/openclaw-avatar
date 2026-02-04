@@ -648,3 +648,32 @@
     width: auto;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Capture Panel Wrapper — SOTA Round 44
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.capture-panel-wrapper {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 1000;
+  max-width: 320px;
+  animation: slide-up var(--duration-normal) var(--ease-out);
+}
+
+@media (max-width: 900px) {
+  .capture-panel-wrapper {
+    right: var(--space-4);
+    bottom: var(--space-4);
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 600px) {
+  .capture-panel-wrapper {
+    right: var(--space-3);
+    bottom: 70px;
+    max-width: 200px;
+  }
+}

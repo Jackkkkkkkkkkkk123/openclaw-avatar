@@ -1,0 +1,356 @@
+/**
+ * Avatar 截图 & 录制面板样式
+ * 
+ * SOTA Round 44
+ */
+
+.capture-panel {
+  background: var(--surface-card);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.capture-panel.compact {
+  padding: 12px;
+  gap: 8px;
+}
+
+.capture-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.capture-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.capture-settings-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.capture-settings-toggle:hover {
+  opacity: 1;
+  background: var(--surface-hover);
+}
+
+/* 操作按钮 */
+.capture-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.capture-action-group {
+  display: flex;
+  gap: 4px;
+}
+
+.capture-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  min-width: 44px;
+}
+
+.capture-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.capture-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.capture-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.capture-btn-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.capture-btn-text {
+  font-size: 13px;
+}
+
+/* 截图按钮 */
+.screenshot-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.screenshot-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+/* 复制按钮 */
+.copy-btn {
+  background: var(--surface-elevated);
+  padding: 10px 12px;
+}
+
+/* 录制按钮 */
+.record-btn {
+  background: var(--surface-elevated);
+}
+
+.record-btn.recording {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  animation: pulse-record 1.5s infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* 暂停/取消按钮 */
+.pause-btn,
+.cancel-btn {
+  padding: 10px 12px;
+}
+
+.cancel-btn {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* 录制状态 */
+.recording-status {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: blink-dot 1s infinite;
+}
+
+.recording-dot.paused {
+  background: #f59e0b;
+  animation: none;
+}
+
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.recording-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #ef4444;
+}
+
+.recording-dot.paused + .recording-label {
+  color: #f59e0b;
+}
+
+.recording-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recording-duration,
+.recording-frames,
+.recording-size {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 状态提示 */
+.capture-toast {
+  background: var(--surface-elevated);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  animation: toast-in 0.3s ease;
+  border-left: 3px solid var(--primary);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 设置面板 */
+.capture-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface-elevated);
+  border-radius: 8px;
+  animation: settings-expand 0.2s ease;
+}
+
+@keyframes settings-expand {
+  from {
+    opacity: 0;
+    height: 0;
+  }
+  to {
+    opacity: 1;
+    height: auto;
+  }
+}
+
+.setting-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setting-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.setting-group select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.setting-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* 快捷键提示 */
+.capture-shortcuts {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  justify-content: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* 紧凑模式调整 */
+.capture-panel.compact .capture-panel-title {
+  font-size: 13px;
+}
+
+.capture-panel.compact .capture-btn {
+  padding: 8px 12px;
+}
+
+.capture-panel.compact .capture-btn-icon {
+  font-size: 16px;
+}
+
+.capture-panel.compact .capture-btn-text {
+  display: none;
+}
+
+.capture-panel.compact .recording-stats {
+  font-size: 11px;
+  gap: 10px;
+}
+
+/* 深色模式优化 */
+:root[data-theme="dark"] .capture-panel {
+  background: rgba(30, 30, 40, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .screenshot-btn {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+}
+
+:root[data-theme="dark"] .screenshot-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+:root[data-theme="dark"] .recording-status {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+:root[data-theme="dark"] .capture-toast {
+  background: rgba(40, 40, 50, 0.95);
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
+  .capture-actions {
+    flex-direction: column;
+  }
+  
+  .capture-action-group {
+    width: 100%;
+  }
+  
+  .capture-btn {
+    flex: 1;
+  }
+  
+  .capture-shortcuts {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
