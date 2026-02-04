@@ -253,5 +253,5 @@ export class OpenClawConnector {
 
 // 默认实例（本地开发）
 export const openClawConnector = new OpenClawConnector({
-  gatewayUrl: 'ws://localhost:3939/ws',
+  gatewayUrl: 'ws://localhost:18789/ws',
 });

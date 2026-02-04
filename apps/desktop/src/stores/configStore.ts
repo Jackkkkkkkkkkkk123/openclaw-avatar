@@ -20,7 +20,7 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  gatewayUrl: 'ws://localhost:3939/ws',
+  gatewayUrl: 'ws://localhost:18789/ws',
   fishApiKey: '',
   theme: 'dark',
   modelPath: '/live2d/shizuku/shizuku.model.json',
@@ -89,12 +89,11 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
   {
     name: 'Shizuku',
     path: '/live2d/shizuku/shizuku.model.json',
-    description: '测试模型 - 可爱女孩',
+    description: '测试模型 - Cubism 2',
   },
-  // 未来可以添加更多模型
-  // {
-  //   name: '初音未来',
-  //   path: '/live2d/miku/miku.model.json',
-  //   description: '初音未来专属模型',
-  // },
+  {
+    name: 'Mao Pro',
+    path: '/live2d/mao_pro/mao_pro.model3.json',
+    description: '猫娘模型 - Cubism 3',
+  },
 ];

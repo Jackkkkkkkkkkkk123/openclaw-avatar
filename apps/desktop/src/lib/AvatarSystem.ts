@@ -55,7 +55,7 @@ export class AvatarSystem {
 
   constructor(config: AvatarSystemConfig = {}) {
     this.config = {
-      gatewayUrl: config.gatewayUrl ?? 'ws://localhost:3939/ws',
+      gatewayUrl: config.gatewayUrl ?? 'ws://localhost:18789/ws',
       fishApiKey: config.fishApiKey ?? '',
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
