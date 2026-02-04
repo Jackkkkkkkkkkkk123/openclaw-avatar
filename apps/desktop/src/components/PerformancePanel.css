@@ -1,0 +1,295 @@
+/* PerformancePanel Styles */
+
+.performance-panel {
+  background: var(--surface, #1a1a2e);
+  border: 1px solid var(--border, #333);
+  border-radius: 12px;
+  padding: 16px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #fff);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.monitor-toggle {
+  padding: 4px 12px;
+  background: var(--surface-hover, #252540);
+  border: 1px solid var(--border, #333);
+  border-radius: 6px;
+  color: var(--text-secondary, #999);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.monitor-toggle:hover {
+  background: var(--surface-active, #303050);
+  color: var(--text, #fff);
+}
+
+.monitor-toggle.active {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #999);
+  font-size: 1.2rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: var(--surface-hover, #252540);
+  color: var(--text, #fff);
+}
+
+/* 实时指标 */
+.realtime-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metric-card {
+  background: var(--surface-hover, #252540);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.metric-card.fps-card {
+  grid-column: span 2;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text, #fff);
+  font-family: 'SF Mono', monospace;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* FPS 曲线图 */
+.fps-chart {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  opacity: 0.3;
+}
+
+.fps-chart svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 性能报告 */
+.performance-report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.performance-report h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 总体评级 */
+.overall-grade {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-hover, #252540);
+  border-radius: 10px;
+}
+
+.grade-badge {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.grade-desc {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text, #fff);
+}
+
+/* 分项评级 */
+.grade-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.grade-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface-hover, #252540);
+  border-radius: 8px;
+}
+
+.grade-item span:first-child {
+  color: var(--text-secondary, #999);
+  font-size: 0.85rem;
+}
+
+.grade-item .grade {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'SF Mono', monospace;
+}
+
+/* 统计数据 */
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stats-grid .stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface-hover, #252540);
+  border-radius: 8px;
+}
+
+.stats-grid .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #999);
+}
+
+.stats-grid .stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #fff);
+  font-family: 'SF Mono', monospace;
+}
+
+/* 优化建议 */
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.suggestions li {
+  color: var(--text, #fff);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+/* 未监控状态 */
+.not-monitoring {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+}
+
+/* 紧凑模式 */
+.perf-panel-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--surface, #1a1a2e);
+  border: 1px solid var(--border, #333);
+  border-radius: 8px;
+  font-family: 'SF Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.perf-panel-compact .fps {
+  font-weight: 600;
+}
+
+.perf-panel-compact .mem {
+  color: var(--text-secondary, #999);
+}
+
+/* Light theme */
+[data-theme="light"] .performance-panel {
+  background: #fff;
+  border-color: #ddd;
+}
+
+[data-theme="light"] .metric-card,
+[data-theme="light"] .overall-grade,
+[data-theme="light"] .grade-item,
+[data-theme="light"] .stats-grid .stat-item {
+  background: #f5f5f5;
+}
+
+[data-theme="light"] .perf-panel-compact {
+  background: #fff;
+  border-color: #ddd;
+}

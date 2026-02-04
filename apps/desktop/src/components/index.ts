@@ -8,6 +8,7 @@ export { HeadTrackingPanel } from './HeadTrackingPanel';
 export { VoiceInputButton } from './VoiceInputButton';
 export { AdvancedAnimationPanel } from './AdvancedAnimationPanel';
 export { EmotionHistoryPanel } from './EmotionHistoryPanel';
+export { PerformancePanel } from './PerformancePanel';
 
 // UI 组件重新导出
 export * from './ui';
