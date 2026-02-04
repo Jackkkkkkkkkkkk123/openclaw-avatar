@@ -532,7 +532,6 @@ export class OpenClawConnector {
       });
     }, this.config.reconnectInterval);
   }
-}
 
   /**
    * 更新配置
@@ -544,26 +543,6 @@ export class OpenClawConnector {
     if (config.token !== undefined) {
       this.config.token = config.token;
     }
-    
-    // 如果已连接，需要重连
-    if (this.isConnected) {
-      console.log('[OpenClaw] 配置已更新，将在下次连接时生效');
-    }
-  }
-
-  /**
-   * 中止当前请求 (暂不支持)
-   */
-  async abort(): Promise<void> {
-    console.log('[OpenClaw] Abort 暂不支持');
-  }
-
-  /**
-   * 获取聊天历史 (暂不支持)
-   */
-  async getHistory(): Promise<unknown[]> {
-    console.log('[OpenClaw] 获取历史暂不支持');
-    return [];
   }
 }
 
