@@ -305,6 +305,7 @@
   overflow: hidden;
   box-shadow: var(--shadow-lg);
   transition: all var(--duration-normal) var(--ease-out);
+  max-height: 60vh;  /* 限制最大高度 */
 }
 
 .chat-aside:hover {

@@ -37,7 +37,7 @@ const DEFAULT_CONFIG: AppConfig = {
   modelName: 'Lain',
   showChat: true,
   chatPosition: 'right',
-  controlsExpanded: true,
+  controlsExpanded: false,  // 默认收起
   showDevPanel: false,  // 默认关闭开发者面板
   enableParticles: false,  // 粒子特效（花架子，禁用）
   enableBackground: false,  // 动态背景（花架子，禁用）
