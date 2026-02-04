@@ -210,21 +210,20 @@ export class AvatarSystem {
         // 检测片段情绪并应用表情
         if (this.config.enableEmotionDetection) {
           const emotion = detectEmotion(text);
-          if (emotion) {
-            this.applyEmotionWithContext(emotion.emotion, text);
+          if (emotion && emotion.emotion !== 'neutral' && emotion.confidence > 0.3) {
+            this.setEmotion(emotion.emotion as Expression);
           }
         }
       },
       
       onAudioAvailable: (audio: HTMLAudioElement, segmentIndex: number) => {
         // 连接口型同步
-        if (this.config.enableLipSync && this.useViseme) {
-          // 使用 Viseme 驱动
-          visemeDriver.connectAudio(audio);
-        } else if (this.config.enableLipSync) {
-          // 使用简单口型同步
+        if (this.config.enableLipSync) {
+          // 使用简单口型同步 (VisemeDriver 不支持直接连接音频)
           this.lipSyncDriver.connect(audio).then(() => {
             this.lipSyncDriver.start();
+          }).catch(err => {
+            console.warn('[AvatarSystem] 口型同步连接失败:', err);
           });
         }
       },

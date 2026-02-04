@@ -9,7 +9,7 @@ import { EmotionParticles } from './components/EmotionParticles';
 import { EmotionBackground } from './components/EmotionBackground';
 import { DynamicLighting } from './components/DynamicLighting';
 import { SceneDirectorPanel } from './components/SceneDirectorPanel';
-import { CapturePanel } from './components/CapturePanel';
+// import { CapturePanel } from './components/CapturePanel'; // 暂时禁用
 import { Button } from './components/ui';
 import { getAvatarCaptureSystem } from './lib/AvatarCaptureSystem';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
@@ -528,12 +528,7 @@ function App() {
         </div>
       </Show>
       
-      {/* SOTA Round 44: 截图 & 录制面板 */}
-      <Show when={avatarReady()}>
-        <div class="capture-panel-wrapper">
-          <CapturePanel compact={!showDevPanel()} />
-        </div>
-      </Show>
+      {/* 截图录制功能暂时禁用 */}
     </main>
   );
 }
