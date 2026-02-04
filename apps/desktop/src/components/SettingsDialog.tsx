@@ -1,6 +1,6 @@
-// 设置对话框组件
-import { createSignal, Show } from 'solid-js';
-import { Dialog, TextField, Select, Switch, Button, Tabs, TabContent } from './ui';
+// 设置对话框组件 - 简化版，核心配置已内置
+import { createSignal } from 'solid-js';
+import { Dialog, Select, Switch, Tabs, TabContent } from './ui';
 import { config, updateConfig, AVAILABLE_MODELS } from '../stores/configStore';
 import { setTheme, type ThemeMode } from '../stores/themeStore';
 import './SettingsDialog.css';
@@ -15,21 +15,7 @@ export interface SettingsDialogProps {
 }
 
 export function SettingsDialog(props: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = createSignal('connection');
-  
-  // 本地状态（编辑中）
-  const [gatewayUrl, setGatewayUrl] = createSignal(config().gatewayUrl);
-  const [gatewayToken, setGatewayToken] = createSignal(config().gatewayToken);
-  const [fishApiKey, setFishApiKey] = createSignal(config().fishApiKey);
-  
-  // 保存连接设置
-  function saveConnectionSettings() {
-    updateConfig({
-      gatewayUrl: gatewayUrl(),
-      gatewayToken: gatewayToken(),
-      fishApiKey: fishApiKey(),
-    });
-  }
+  const [activeTab, setActiveTab] = createSignal('appearance');
   
   // 主题选项
   const themeOptions = [
@@ -54,87 +40,12 @@ export function SettingsDialog(props: SettingsDialogProps) {
     >
       <Tabs
         items={[
-          { value: 'connection', label: '连接', icon: '🔗' },
           { value: 'appearance', label: '外观', icon: '🎨' },
           { value: 'model', label: '模型', icon: '👤' },
         ]}
         value={activeTab()}
         onValueChange={setActiveTab}
       >
-        {/* 连接设置 */}
-        <TabContent value="connection" class="settings-tab">
-          <div class="settings-section">
-            <h4>OpenClaw Gateway</h4>
-            
-            <TextField
-              label="Gateway URL"
-              value={gatewayUrl()}
-              onValueChange={setGatewayUrl}
-              placeholder="ws://localhost:18789/ws"
-              description="OpenClaw Gateway 的 WebSocket 地址"
-            />
-            
-            <TextField
-              label="Gateway Token"
-              type="password"
-              value={gatewayToken()}
-              onValueChange={setGatewayToken}
-              placeholder="输入 Gateway Token (可选)"
-              description="运行 echo $OPENCLAW_GATEWAY_TOKEN 获取"
-            />
-            
-            <div class="settings-row">
-              <div class={`connection-status connection-status--${props.connectionStatus}`}>
-                <span class="status-dot"></span>
-                <span>
-                  {props.connectionStatus === 'connected' ? '已连接' :
-                   props.connectionStatus === 'connecting' ? '连接中...' :
-                   props.connectionStatus === 'error' ? '连接错误' : '未连接'}
-                </span>
-              </div>
-              
-              <Show when={props.connectionStatus === 'connected'}>
-                <Button variant="danger" size="sm" onClick={() => {
-                  saveConnectionSettings();
-                  props.onDisconnect();
-                }}>
-                  断开
-                </Button>
-              </Show>
-              
-              <Show when={props.connectionStatus !== 'connected' && props.connectionStatus !== 'connecting'}>
-                <Button variant="primary" size="sm" onClick={() => {
-                  saveConnectionSettings();
-                  props.onConnect();
-                }}>
-                  连接
-                </Button>
-              </Show>
-            </div>
-          </div>
-          
-          <div class="settings-section">
-            <h4>Fish Audio TTS</h4>
-            
-            <TextField
-              label="API Key"
-              type="password"
-              value={fishApiKey()}
-              onValueChange={setFishApiKey}
-              placeholder="输入 Fish Audio API Key"
-              description="用于语音合成，获取地址: fish.audio"
-            />
-            
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={saveConnectionSettings}
-            >
-              保存设置
-            </Button>
-          </div>
-        </TabContent>
-        
         {/* 外观设置 */}
         <TabContent value="appearance" class="settings-tab">
           <div class="settings-section">
@@ -211,10 +122,19 @@ export function SettingsDialog(props: SettingsDialogProps) {
                 <span class="model-info__label">名称</span>
                 <span class="model-info__value">{config().modelName}</span>
               </div>
-              <div class="model-info__item">
-                <span class="model-info__label">路径</span>
-                <span class="model-info__value code">{config().modelPath}</span>
-              </div>
+            </div>
+          </div>
+          
+          {/* 连接状态指示器 */}
+          <div class="settings-section">
+            <h4>连接状态</h4>
+            <div class={`connection-status connection-status--${props.connectionStatus}`}>
+              <span class="status-dot"></span>
+              <span>
+                {props.connectionStatus === 'connected' ? '✅ 已连接到初音' :
+                 props.connectionStatus === 'connecting' ? '🔄 连接中...' :
+                 props.connectionStatus === 'error' ? '❌ 连接失败' : '⏸️ 未连接'}
+              </span>
             </div>
           </div>
         </TabContent>
