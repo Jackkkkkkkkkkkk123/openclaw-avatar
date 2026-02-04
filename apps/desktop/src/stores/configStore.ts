@@ -32,15 +32,23 @@ const DEFAULT_CONFIG: AppConfig = {
   controlsExpanded: true,
 };
 
-const STORAGE_KEY = 'openclaw-avatar-config';
+const STORAGE_KEY = 'openclaw-avatar-config-v2'; // v2: 强制使用内置配置
 
-// 从 localStorage 加载配置
+// 内置配置（不允许用户覆盖）
+const BUILTIN_CONFIG = {
+  gatewayUrl: 'wss://miku.sngxai.com/ws',
+  gatewayToken: '',
+  fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3',
+};
+
+// 从 localStorage 加载配置（连接配置始终使用内置值）
 function loadConfig(): AppConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return { ...DEFAULT_CONFIG, ...parsed };
+      // 连接配置强制使用内置值，其他配置允许用户自定义
+      return { ...DEFAULT_CONFIG, ...parsed, ...BUILTIN_CONFIG };
     }
   } catch (e) {
     console.warn('Failed to load config:', e);
