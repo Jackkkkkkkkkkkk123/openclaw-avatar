@@ -87,6 +87,11 @@ export interface ModelInfo {
 
 export const AVAILABLE_MODELS: ModelInfo[] = [
   {
+    name: '初音未来',
+    path: '/live2d/001/0A-原档整理(1).model3.json',
+    description: '白发角色 - Cubism 3',
+  },
+  {
     name: 'Shizuku',
     path: '/live2d/shizuku/shizuku.model.json',
     description: '测试模型 - Cubism 2',

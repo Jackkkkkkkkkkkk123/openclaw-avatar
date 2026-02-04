@@ -16,7 +16,8 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    host: '0.0.0.0',  // 允许外部访问
+    allowedHosts: ['avatar.sngxai.com', 'localhost'],  // 允许的域名
     hmr: host
       ? {
           protocol: "ws",
