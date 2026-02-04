@@ -3,7 +3,10 @@
  * 
  * 将 OpenClaw 连接、情绪检测、TTS、口型同步统一管理
  * 
- * v2.0 - 集成 Viseme 精确口型和微表情系统
+ * v3.0 - 集成表情序列系统
+ * - Viseme 精确口型
+ * - 微表情系统
+ * - ✨ 表情序列动画 (复合表情、情绪惯性)
  */
 
 import { avatarController, type Expression } from './AvatarController';
@@ -13,6 +16,7 @@ import { TTSService, createTTSService, type TTSResult } from './TTSService';
 import { LipSyncDriver } from './LipSyncDriver';
 import { visemeDriver } from './VisemeDriver';
 import { microExpressionSystem } from './MicroExpressionSystem';
+import { expressionSequencer, analyzeTextForSequence } from './ExpressionSequencer';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -192,17 +196,31 @@ export class AvatarSystem {
    * 检测并应用情绪
    */
   private detectAndApplyEmotion(text: string) {
+    // 首先尝试匹配表情序列（更丰富的表情反应）
+    if (this.useSequencer && analyzeTextForSequence(text)) {
+      console.log('[AvatarSystem] 触发表情序列');
+      return;
+    }
+    
     const result = detectEmotion(text);
     
     // 只有置信度足够高才切换表情
     if (result.confidence > 0.3 && result.emotion !== 'neutral') {
-      this.setEmotion(result.emotion);
+      // 使用智能表情切换（带惯性）
+      if (this.useSequencer) {
+        expressionSequencer.setEmotionSmart(result.emotion);
+      } else {
+        this.setEmotion(result.emotion);
+      }
       
       // 设置自动恢复 neutral
       const duration = getEmotionDuration(result);
       this.scheduleEmotionReset(duration);
     }
   }
+  
+  // 是否使用表情序列系统 (默认启用)
+  private useSequencer = true;
 
   /**
    * 设置表情
@@ -523,6 +541,49 @@ export class AvatarSystem {
     this.connector.setToken(token);
   }
 
+  // ========== 表情序列系统 API ==========
+
+  /**
+   * 启用/禁用表情序列系统
+   */
+  setUseSequencer(enabled: boolean) {
+    this.useSequencer = enabled;
+    console.log('[AvatarSystem] 表情序列系统:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 播放预定义的表情序列
+   */
+  playSequence(name: string): boolean {
+    return expressionSequencer.playPreset(name as any);
+  }
+
+  /**
+   * 获取可用的表情序列列表
+   */
+  getAvailableSequences(): string[] {
+    return expressionSequencer.getPresetNames();
+  }
+
+  /**
+   * 停止当前表情序列
+   */
+  stopSequence() {
+    expressionSequencer.stop();
+  }
+
+  /**
+   * 获取表情序列系统状态
+   */
+  getSequencerState() {
+    return {
+      isPlaying: expressionSequencer.isSequencePlaying(),
+      currentSequence: expressionSequencer.getCurrentSequenceName(),
+      emotionState: expressionSequencer.getEmotionState(),
+      emotionHistory: expressionSequencer.getEmotionHistory(),
+    };
+  }
+
   /**
    * 销毁
    */
@@ -530,6 +591,7 @@ export class AvatarSystem {
     this.disconnect();
     this.ttsService?.destroy();
     this.lipSyncDriver.destroy();
+    expressionSequencer.destroy();
     
     if (this.emotionResetTimer) {
       clearTimeout(this.emotionResetTimer);
