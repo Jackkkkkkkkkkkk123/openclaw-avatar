@@ -7,6 +7,7 @@ export { ShortcutsHelpDialog } from './ShortcutsHelpDialog';
 export { HeadTrackingPanel } from './HeadTrackingPanel';
 export { VoiceInputButton } from './VoiceInputButton';
 export { AdvancedAnimationPanel } from './AdvancedAnimationPanel';
+export { EmotionHistoryPanel } from './EmotionHistoryPanel';
 
 // UI 组件重新导出
 export * from './ui';
