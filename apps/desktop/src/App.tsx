@@ -5,6 +5,7 @@ import { ChatPanel, type ChatMessage } from './components/ChatPanel';
 import { SettingsDialog } from './components/SettingsDialog';
 import { DevPanel } from './components/DevPanel';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { EmotionParticles } from './components/EmotionParticles';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
@@ -219,6 +220,15 @@ function App() {
       <div class={`app-main ${config().chatPosition === 'left' ? 'app-main--chat-left' : ''}`}>
         {/* Avatar 舞台 */}
         <section class="avatar-stage">
+          {/* 情绪粒子特效 */}
+          <EmotionParticles
+            emotion={systemState().currentEmotion}
+            intensity={1.0}
+            enabled={config().enableParticles ?? true}
+            showControls={showDevPanel()}
+            showCounter={showDevPanel()}
+          />
+          
           <Avatar 
             modelPath={modelPath()}
             width={500}
@@ -326,6 +336,19 @@ function App() {
                   <Button onClick={testTTS}>🔊 TTS 测试</Button>
                   <Button onClick={() => updateConfig({ showChat: !config().showChat })}>
                     💬 {config().showChat ? '隐藏' : '显示'}聊天
+                  </Button>
+                </div>
+              </div>
+              
+              {/* 视觉效果 */}
+              <div class="control-group">
+                <h4>特效</h4>
+                <div class="control-buttons">
+                  <Button 
+                    active={config().enableParticles}
+                    onClick={() => updateConfig({ enableParticles: !config().enableParticles })}
+                  >
+                    ✨ 粒子特效 {config().enableParticles ? '开' : '关'}
                   </Button>
                 </div>
               </div>
