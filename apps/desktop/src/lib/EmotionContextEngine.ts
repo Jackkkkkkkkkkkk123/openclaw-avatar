@@ -176,14 +176,15 @@ const INTENT_EMOTION_INFLUENCE: Record<Intent, Partial<Record<Expression, number
 };
 
 // 氛围映射：情绪组合 → 氛围
+// 注意：检测顺序很重要，更具体的氛围应该先检测
 const ATMOSPHERE_DETECTION: Record<Atmosphere, Expression[]> = {
-  warm: ['loving', 'grateful', 'happy', 'hopeful'],
-  tense: ['anxious', 'fear', 'angry', 'determined'],
-  casual: ['happy', 'playful', 'amused', 'curious'],
-  serious: ['thinking', 'determined', 'neutral', 'confused'],
-  playful: ['playful', 'amused', 'excited', 'happy'],
-  melancholy: ['sad', 'lonely', 'disappointed', 'bored'],
-  neutral: ['neutral', 'thinking'],
+  playful: ['playful', 'amused'],                  // 最先检测 playful（更具体）
+  warm: ['loving', 'grateful', 'hopeful'],         // 温馨
+  tense: ['anxious', 'fear', 'angry'],             // 紧张
+  casual: ['happy', 'curious', 'relieved'],        // 轻松（不含 playful/amused）
+  serious: ['thinking', 'determined', 'confused'], // 严肃
+  melancholy: ['sad', 'lonely', 'disappointed', 'bored'],  // 忧郁
+  neutral: ['neutral', 'excited'],                 // 中性（excited 放这里作为默认活跃）
 };
 
 // ========== 话题关键词 ==========
@@ -389,11 +390,11 @@ export class EmotionContextEngine {
   detectIntent(text: string): Intent {
     const lowerText = text.toLowerCase();
     
-    // 按优先级检测意图
+    // 按优先级检测意图 (注意: disagreement 在 agreement 前面，因为 "不同意" 包含 "同意")
     const intentPriority: Intent[] = [
       'greeting', 'farewell', 'appreciation', 'complaint',
       'question', 'request', 'expression', 
-      'agreement', 'disagreement', 'statement'
+      'disagreement', 'agreement', 'statement'  // disagreement 优先
     ];
     
     for (const intent of intentPriority) {
@@ -419,10 +420,16 @@ export class EmotionContextEngine {
   private updateAtmosphere(emotion: Expression) {
     let newAtmosphere: Atmosphere = 'neutral';
     
+    // 按优先级顺序检测氛围（更具体的先检测）
+    const atmospherePriority: Atmosphere[] = [
+      'playful', 'warm', 'tense', 'melancholy', 'serious', 'casual', 'neutral'
+    ];
+    
     // 根据情绪确定氛围
-    for (const [atmosphere, emotions] of Object.entries(ATMOSPHERE_DETECTION)) {
-      if ((emotions as Expression[]).includes(emotion)) {
-        newAtmosphere = atmosphere as Atmosphere;
+    for (const atmosphere of atmospherePriority) {
+      const emotions = ATMOSPHERE_DETECTION[atmosphere];
+      if (emotions && (emotions as Expression[]).includes(emotion)) {
+        newAtmosphere = atmosphere;
         break;
       }
     }
