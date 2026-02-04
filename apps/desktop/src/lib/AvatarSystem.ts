@@ -3,11 +3,12 @@
  * 
  * 将 OpenClaw 连接、情绪检测、TTS、口型同步统一管理
  * 
- * v4.0 - SOTA Round 6: 情绪上下文引擎
+ * v5.0 - SOTA Round 42: 流式 TTS
  * - Viseme 精确口型
  * - 微表情系统
  * - 表情序列动画 (复合表情、情绪惯性)
- * - ✨ 情绪上下文引擎 (对话基调、话题识别、情绪惯性)
+ * - 情绪上下文引擎 (对话基调、话题识别、情绪惯性)
+ * - ✨ 流式 TTS (句子级分割、边合成边播放、低首字延迟)
  */
 
 import { avatarController, type Expression } from './AvatarController';
@@ -15,6 +16,7 @@ import { OpenClawConnector, type ConnectionStatus, type MessageChunk } from './O
 import { OpenClawBridgeConnector } from './OpenClawBridgeConnector';
 import { detectEmotion, getEmotionDuration } from './EmotionDetector';
 import { TTSService, createTTSService, type TTSResult } from './TTSService';
+import { StreamingTTSManager, createStreamingTTSManager, type StreamingTTSState } from './StreamingTTSManager';
 import { LipSyncDriver } from './LipSyncDriver';
 import { visemeDriver } from './VisemeDriver';
 import { microExpressionSystem } from './MicroExpressionSystem';
@@ -42,6 +44,8 @@ export interface AvatarSystemConfig {
   enableTTS?: boolean;
   enableLipSync?: boolean;
   enableEmotionDetection?: boolean;
+  /** 启用流式 TTS (边合成边播放，降低首字延迟) */
+  useStreamingTTS?: boolean;
 }
 
 export interface SystemState {
@@ -65,6 +69,7 @@ export class AvatarSystem {
   private bridgeConnector: OpenClawBridgeConnector;
   private useBridge: boolean = true;  // 默认使用 Bridge
   private ttsService: TTSService | null = null;
+  private streamingTTSManager: StreamingTTSManager | null = null;
   private lipSyncDriver: LipSyncDriver;
   private config: Required<AvatarSystemConfig>;
   
@@ -108,6 +113,7 @@ export class AvatarSystem {
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
       enableEmotionDetection: config.enableEmotionDetection ?? true,
+      useStreamingTTS: config.useStreamingTTS ?? true,  // 默认启用流式 TTS
     };
 
     this.useBridge = this.config.useBridge ?? true;
@@ -129,13 +135,88 @@ export class AvatarSystem {
       sensitivity: 1.2,
     });
 
-    // 初始化 TTS (API Key 已内置)
+    // 初始化 TTS
     if (this.config.enableTTS) {
       this.ttsService = createTTSService(this.config.fishApiKey);
+      
+      // 初始化流式 TTS (显著降低首字延迟)
+      if (this.config.useStreamingTTS) {
+        this.streamingTTSManager = createStreamingTTSManager({
+          apiKey: this.config.fishApiKey || 'ceea7f5420dc4214807f4ce5dccb9da3',
+          referenceId: '9dec9671824543b4a4f9f382dbf15748',
+          minSegmentLength: 8,
+          maxSegmentLength: 80,
+          prefetchCount: 2,
+          segmentGap: 100,
+        });
+        this.setupStreamingTTSCallbacks();
+        console.log('[AvatarSystem] 流式 TTS 已启用 - 首字延迟将大幅降低');
+      }
     }
 
     // 设置事件处理
     this.setupEventHandlers();
+  }
+  
+  /**
+   * 设置流式 TTS 回调
+   */
+  private setupStreamingTTSCallbacks(): void {
+    if (!this.streamingTTSManager) return;
+    
+    this.streamingTTSManager.setCallbacks({
+      onStateChange: (state: StreamingTTSState) => {
+        // 更新说话状态
+        const isSpeaking = state.status === 'playing' || state.status === 'synthesizing';
+        if (this.state.isSpeaking !== isSpeaking) {
+          this.updateState({ isSpeaking });
+        }
+        
+        // 打印首字延迟信息
+        if (state.firstTokenLatency !== null && state.currentSegment === 0 && state.status === 'playing') {
+          console.log(`[AvatarSystem] 🚀 流式 TTS 首字延迟: ${state.firstTokenLatency.toFixed(0)}ms`);
+        }
+      },
+      
+      onSegmentStart: (index: number, text: string) => {
+        console.log(`[AvatarSystem] 播放片段 ${index}: "${text.slice(0, 30)}..."`);
+        
+        // 检测片段情绪并应用表情
+        if (this.config.enableEmotionDetection) {
+          const emotion = detectEmotion(text);
+          if (emotion) {
+            this.applyEmotionWithContext(emotion.emotion, text);
+          }
+        }
+      },
+      
+      onAudioAvailable: (audio: HTMLAudioElement, segmentIndex: number) => {
+        // 连接口型同步
+        if (this.config.enableLipSync && this.useViseme) {
+          // 使用 Viseme 驱动
+          visemeDriver.connectAudio(audio);
+        } else if (this.config.enableLipSync) {
+          // 使用简单口型同步
+          this.lipSyncDriver.connect(audio).then(() => {
+            this.lipSyncDriver.start();
+          });
+        }
+      },
+      
+      onSegmentEnd: (index: number) => {
+        // 片段播放完成
+      },
+      
+      onComplete: () => {
+        console.log('[AvatarSystem] 流式 TTS 播放完成');
+        this.updateState({ isSpeaking: false });
+        avatarController.setMouthOpenY(0);
+      },
+      
+      onError: (error: Error, segment: number) => {
+        console.error(`[AvatarSystem] 流式 TTS 片段 ${segment} 错误:`, error);
+      },
+    });
   }
 
   /**
@@ -186,6 +267,9 @@ export class AvatarSystem {
     console.log('[AvatarSystem] 微表情:', enabled ? '启用' : '禁用');
   }
 
+  // 流式 TTS 是否已开始
+  private isStreamingTTSStarted = false;
+
   /**
    * 处理消息片段
    */
@@ -204,8 +288,19 @@ export class AvatarSystem {
         this.detectAndApplyEmotion(chunk.content);
       }
 
-      // 将句子加入 TTS 队列
-      if (this.config.enableTTS && this.ttsService) {
+      // 流式 TTS 处理 (边接收边合成，显著降低首字延迟)
+      if (this.config.enableTTS && this.config.useStreamingTTS && this.streamingTTSManager) {
+        // 第一个文本块，启动流式模式
+        if (!this.isStreamingTTSStarted) {
+          this.streamingTTSManager.startStream();
+          this.isStreamingTTSStarted = true;
+          console.log('[AvatarSystem] 🚀 开始流式 TTS');
+        }
+        // 追加文本到流式 TTS
+        this.streamingTTSManager.appendText(chunk.content);
+      }
+      // 传统 TTS 队列处理
+      else if (this.config.enableTTS && this.ttsService) {
         this.queueTTS(chunk.content);
       }
     } 
@@ -220,11 +315,24 @@ export class AvatarSystem {
       // 通知完成
       this.notifyTextCallbacks(fullText, true);
 
+      // 结束流式 TTS
+      if (this.isStreamingTTSStarted && this.streamingTTSManager) {
+        this.streamingTTSManager.endStream();
+        this.isStreamingTTSStarted = false;
+        console.log('[AvatarSystem] ✅ 流式 TTS 结束');
+      }
+
       console.log('[AvatarSystem] 消息完成:', fullText.slice(0, 100));
     }
     else if (chunk.type === 'error') {
       console.error('[AvatarSystem] 消息错误:', chunk.content);
       this.setEmotion('sad');
+      
+      // 错误时也要结束流式 TTS
+      if (this.isStreamingTTSStarted && this.streamingTTSManager) {
+        this.streamingTTSManager.stop();
+        this.isStreamingTTSStarted = false;
+      }
     }
     else if ((chunk as any).type === 'thinking') {
       // 思考时可以显示一个 "思考中" 的状态
@@ -628,6 +736,8 @@ export class AvatarSystem {
     this.connector.disconnect();
     this.bridgeConnector.disconnect();
     this.ttsService?.stop();
+    this.streamingTTSManager?.stop();
+    this.isStreamingTTSStarted = false;
     this.lipSyncDriver.stop();
     this.ttsQueue = [];
     this.isProcessingTTS = false;
@@ -650,6 +760,9 @@ export class AvatarSystem {
     await this.connector.abort();
     this.ttsQueue = [];
     this.isProcessingTTS = false;
+    // 停止流式 TTS
+    this.streamingTTSManager?.stop();
+    this.isStreamingTTSStarted = false;
     this.updateState({ isSpeaking: false, processingText: '' });
   }
 
@@ -687,6 +800,65 @@ export class AvatarSystem {
   }
 
   /**
+   * 使用流式 TTS 播放文本 (手动测试用)
+   * 
+   * 相比传统 speak()，流式 TTS 会：
+   * 1. 将文本按句子分割
+   * 2. 并行合成多个片段
+   * 3. 边合成边播放，不等待全部完成
+   * 4. 显著降低首字延迟
+   */
+  async speakStreaming(text: string): Promise<void> {
+    if (!this.streamingTTSManager) {
+      console.warn('[AvatarSystem] 流式 TTS 未启用，回退到传统 TTS');
+      return this.speak(text);
+    }
+    
+    // 检测情绪
+    if (this.config.enableEmotionDetection) {
+      this.detectAndApplyEmotion(text);
+    }
+    
+    this.updateState({ isSpeaking: true });
+    
+    try {
+      await this.streamingTTSManager.speak(text);
+    } catch (e) {
+      // 流式 TTS 失败，回退到传统 TTS
+      console.warn('[AvatarSystem] 流式 TTS 失败，回退到传统 TTS:', e);
+      try {
+        await this.speak(text);
+      } catch (e2) {
+        // 传统 TTS 也失败了，忽略（可能是测试环境）
+        console.warn('[AvatarSystem] 传统 TTS 也失败:', e2);
+      }
+    } finally {
+      this.updateState({ isSpeaking: false });
+    }
+  }
+  
+  /**
+   * 获取流式 TTS 状态
+   */
+  getStreamingTTSState(): StreamingTTSState | null {
+    return this.streamingTTSManager?.getState() ?? null;
+  }
+  
+  /**
+   * 启用/禁用流式 TTS
+   */
+  setUseStreamingTTS(enabled: boolean): void {
+    this.updateConfig({ useStreamingTTS: enabled });
+  }
+  
+  /**
+   * 检查流式 TTS 是否启用
+   */
+  isStreamingTTSEnabled(): boolean {
+    return this.config.useStreamingTTS && this.streamingTTSManager !== null;
+  }
+
+  /**
    * 模拟对话（用于测试，无需 OpenClaw 连接）
    */
   async simulateResponse(text: string): Promise<void> {
@@ -704,8 +876,12 @@ export class AvatarSystem {
     // 通知文本回调
     this.notifyTextCallbacks(text, true);
 
-    // 播放 TTS
-    await this.speak(text);
+    // 使用流式 TTS（如果启用）
+    if (this.config.useStreamingTTS && this.streamingTTSManager) {
+      await this.speakStreaming(text);
+    } else {
+      await this.speak(text);
+    }
   }
 
   /**
@@ -767,7 +943,22 @@ export class AvatarSystem {
   updateConfig(config: Partial<AvatarSystemConfig>) {
     if (config.fishApiKey && config.fishApiKey !== this.config.fishApiKey) {
       this.ttsService = createTTSService(config.fishApiKey);
+      // 同时更新流式 TTS 管理器的 API Key
+      this.streamingTTSManager?.updateConfig({ apiKey: config.fishApiKey });
       console.log('[AvatarSystem] TTS 服务已更新');
+    }
+    
+    // 更新流式 TTS 开关
+    if (config.useStreamingTTS !== undefined && config.useStreamingTTS !== this.config.useStreamingTTS) {
+      this.config.useStreamingTTS = config.useStreamingTTS;
+      if (config.useStreamingTTS && !this.streamingTTSManager) {
+        this.streamingTTSManager = createStreamingTTSManager({
+          apiKey: this.config.fishApiKey || 'ceea7f5420dc4214807f4ce5dccb9da3',
+          referenceId: '9dec9671824543b4a4f9f382dbf15748',
+        });
+        this.setupStreamingTTSCallbacks();
+      }
+      console.log('[AvatarSystem] 流式 TTS:', config.useStreamingTTS ? '启用' : '禁用');
     }
     
     // 更新连接器配置
@@ -1094,6 +1285,7 @@ export class AvatarSystem {
   destroy() {
     this.disconnect();
     this.ttsService?.destroy();
+    this.streamingTTSManager?.destroy();
     this.lipSyncDriver.destroy();
     expressionSequencer.destroy();
     
