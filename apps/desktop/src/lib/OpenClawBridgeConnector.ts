@@ -92,7 +92,7 @@ export class OpenClawBridgeConnector {
       if (content) {
         // 通知消息处理器
         this.notifyMessage({ type: 'text', content });
-        this.notifyMessage({ type: 'end', content: '' });
+        this.notifyMessage({ type: 'end', content });  // end 消息也要带完整内容
         console.log('[BridgeConnector] 收到回复:', content.slice(0, 100));
         return true;
       }
