@@ -19,6 +19,8 @@ import { visemeDriver } from './VisemeDriver';
 import { microExpressionSystem } from './MicroExpressionSystem';
 import { expressionSequencer, analyzeTextForSequence } from './ExpressionSequencer';
 import { emotionContextEngine, type ConversationTone } from './EmotionContextEngine';
+import { headTrackingService, type TrackingData } from './HeadTrackingService';
+import { keyboardShortcuts, formatShortcut } from './KeyboardShortcuts';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -35,6 +37,8 @@ export interface SystemState {
   currentEmotion: Expression;
   lastMessage: string;
   processingText: string;
+  isHeadTrackingActive: boolean;
+  headTrackingSupported: boolean;
 }
 
 type StateChangeCallback = (state: SystemState) => void;
@@ -55,7 +59,12 @@ export class AvatarSystem {
     currentEmotion: 'neutral',
     lastMessage: '',
     processingText: '',
+    isHeadTrackingActive: false,
+    headTrackingSupported: false,
   };
+  
+  // 头部追踪取消订阅函数
+  private headTrackingUnsubscribe: (() => void) | null = null;
 
   // 情绪恢复定时器
   private emotionResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -651,6 +660,157 @@ export class AvatarSystem {
     };
   }
 
+  // ========== 头部追踪 API ==========
+
+  /**
+   * 检查头部追踪是否支持
+   */
+  async checkHeadTrackingSupport(): Promise<boolean> {
+    const supported = await headTrackingService.constructor.isSupported?.() ?? 
+      !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    this.updateState({ headTrackingSupported: supported });
+    return supported;
+  }
+
+  /**
+   * 启动头部追踪
+   */
+  async startHeadTracking(): Promise<void> {
+    try {
+      // 初始化服务
+      await headTrackingService.init();
+      
+      // 订阅追踪数据
+      this.headTrackingUnsubscribe = headTrackingService.onTracking((data: TrackingData) => {
+        this.handleHeadTrackingData(data);
+      });
+      
+      // 启动追踪
+      await headTrackingService.start();
+      
+      this.updateState({ isHeadTrackingActive: true });
+      console.log('[AvatarSystem] ✅ 头部追踪已启动');
+    } catch (err) {
+      console.error('[AvatarSystem] 头部追踪启动失败:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * 停止头部追踪
+   */
+  stopHeadTracking(): void {
+    if (this.headTrackingUnsubscribe) {
+      this.headTrackingUnsubscribe();
+      this.headTrackingUnsubscribe = null;
+    }
+    
+    headTrackingService.stop();
+    this.updateState({ isHeadTrackingActive: false });
+    console.log('[AvatarSystem] 头部追踪已停止');
+  }
+
+  /**
+   * 处理头部追踪数据
+   */
+  private handleHeadTrackingData(data: TrackingData): void {
+    // 更新 Avatar 视线位置
+    const screenX = (data.pose.x + 1) / 2;  // 转换到 0-1
+    const screenY = (data.pose.y + 1) / 2;
+    avatarController.lookAt(screenX, screenY);
+    
+    // 可选: 根据用户表情同步 Avatar 表情
+    if (data.expression.detectedEmotion && data.expression.detectedEmotion !== 'neutral') {
+      // 用户微笑时，Avatar 也微笑
+      if (data.expression.mouthSmile > 0.5 && this.state.currentEmotion === 'neutral') {
+        this.setEmotion('happy');
+      }
+    }
+    
+    // 根据眼睛状态触发眨眼
+    if (data.expression.leftEyeOpen < 0.2 && data.expression.rightEyeOpen < 0.2) {
+      avatarController.triggerBlink?.();
+    }
+  }
+
+  /**
+   * 获取头部追踪状态
+   */
+  getHeadTrackingStatus(): { active: boolean; supported: boolean } {
+    return {
+      active: this.state.isHeadTrackingActive,
+      supported: this.state.headTrackingSupported,
+    };
+  }
+
+  // ========== 键盘快捷键 API ==========
+
+  /**
+   * 初始化键盘快捷键
+   */
+  initKeyboardShortcuts(callbacks: {
+    onToggleChat?: () => void;
+    onToggleSettings?: () => void;
+    onToggleVoice?: () => void;
+    onToggleTracking?: () => void;
+    onExpressionChange?: (emotion: Expression) => void;
+    onFocusInput?: () => void;
+    onSendMessage?: () => void;
+    onClearChat?: () => void;
+    onToggleTheme?: () => void;
+    onToggleFullscreen?: () => void;
+    onEscape?: () => void;
+    onHelp?: () => void;
+  }): void {
+    keyboardShortcuts.init();
+    
+    keyboardShortcuts.registerDefaults({
+      'toggle-chat': callbacks.onToggleChat,
+      'toggle-settings': callbacks.onToggleSettings,
+      'toggle-voice': callbacks.onToggleVoice,
+      'toggle-tracking': callbacks.onToggleTracking ?? (() => {
+        if (this.state.isHeadTrackingActive) {
+          this.stopHeadTracking();
+        } else {
+          this.startHeadTracking().catch(console.error);
+        }
+      }),
+      'expression-happy': () => callbacks.onExpressionChange?.('happy') ?? this.setEmotion('happy'),
+      'expression-sad': () => callbacks.onExpressionChange?.('sad') ?? this.setEmotion('sad'),
+      'expression-surprised': () => callbacks.onExpressionChange?.('surprised') ?? this.setEmotion('surprised'),
+      'expression-neutral': () => callbacks.onExpressionChange?.('neutral') ?? this.setEmotion('neutral'),
+      'focus-input': callbacks.onFocusInput,
+      'send-message': callbacks.onSendMessage,
+      'clear-chat': callbacks.onClearChat,
+      'toggle-theme': callbacks.onToggleTheme,
+      'toggle-fullscreen': callbacks.onToggleFullscreen ?? (() => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen();
+        }
+      }),
+      'escape': callbacks.onEscape,
+      'help': callbacks.onHelp,
+    });
+    
+    console.log('[AvatarSystem] ✅ 键盘快捷键已初始化');
+  }
+
+  /**
+   * 获取所有快捷键
+   */
+  getKeyboardShortcuts() {
+    return keyboardShortcuts.getAll();
+  }
+
+  /**
+   * 格式化快捷键显示
+   */
+  formatShortcut(keys: string[]): string {
+    return formatShortcut(keys);
+  }
+
   /**
    * 销毁
    */
@@ -659,6 +819,13 @@ export class AvatarSystem {
     this.ttsService?.destroy();
     this.lipSyncDriver.destroy();
     expressionSequencer.destroy();
+    
+    // 停止头部追踪
+    this.stopHeadTracking();
+    headTrackingService.destroy();
+    
+    // 销毁键盘快捷键
+    keyboardShortcuts.destroy();
     
     if (this.emotionResetTimer) {
       clearTimeout(this.emotionResetTimer);
