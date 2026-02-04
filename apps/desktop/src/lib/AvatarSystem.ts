@@ -2,6 +2,8 @@
  * Avatar System - 整合所有模块的核心系统
  * 
  * 将 OpenClaw 连接、情绪检测、TTS、口型同步统一管理
+ * 
+ * v2.0 - 集成 Viseme 精确口型和微表情系统
  */
 
 import { avatarController, type Expression } from './AvatarController';
@@ -9,6 +11,8 @@ import { OpenClawConnector, type ConnectionStatus, type MessageChunk } from './O
 import { detectEmotion, getEmotionDuration } from './EmotionDetector';
 import { TTSService, createTTSService, type TTSResult } from './TTSService';
 import { LipSyncDriver } from './LipSyncDriver';
+import { visemeDriver } from './VisemeDriver';
+import { microExpressionSystem } from './MicroExpressionSystem';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -99,10 +103,38 @@ export class AvatarSystem {
       this.handleMessageChunk(chunk);
     });
 
-    // 口型同步更新
+    // 口型同步更新 (fallback 用)
     this.lipSyncDriver.onMouthUpdate((openY) => {
-      avatarController.setMouthOpenY(openY);
+      // 如果 Viseme 没有启用，使用简单口型同步
+      if (!this.useViseme) {
+        avatarController.setMouthOpenY(openY);
+      }
     });
+
+    // 初始化高级系统 (Viseme + 微表情)
+    avatarController.initAdvancedSystems();
+    
+    console.log('[AvatarSystem] 高级动画系统已启动');
+  }
+
+  // 是否使用 Viseme 精确口型 (默认启用)
+  private useViseme = true;
+
+  /**
+   * 启用/禁用 Viseme 精确口型
+   */
+  setUseViseme(enabled: boolean) {
+    this.useViseme = enabled;
+    avatarController.setVisemeEnabled(enabled);
+    console.log('[AvatarSystem] Viseme 口型:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 启用/禁用微表情系统
+   */
+  setUseMicroExpression(enabled: boolean) {
+    avatarController.setMicroExpressionEnabled(enabled);
+    console.log('[AvatarSystem] 微表情:', enabled ? '启用' : '禁用');
   }
 
   /**
@@ -178,6 +210,8 @@ export class AvatarSystem {
   setEmotion(emotion: Expression) {
     if (emotion !== this.state.currentEmotion) {
       avatarController.setExpression(emotion);
+      // 同步情绪到 Viseme 和微表情系统
+      avatarController.syncEmotionToSystems(emotion);
       this.updateState({ currentEmotion: emotion });
       console.log('[AvatarSystem] 表情切换:', emotion);
     }
@@ -258,11 +292,26 @@ export class AvatarSystem {
   /**
    * 播放语音并同步口型
    */
-  private async speakWithLipSync(_text: string, ttsResult: TTSResult): Promise<void> {
+  private async speakWithLipSync(text: string, ttsResult: TTSResult): Promise<void> {
     const audio = new Audio(ttsResult.audioUrl);
     
-    // 连接口型同步
-    if (this.config.enableLipSync) {
+    // 估算音频时长 (中文约 5 字/秒)
+    const estimatedDuration = Math.max(1000, text.length * 200);
+    
+    // 标记开始说话
+    microExpressionSystem.setSpeaking(true);
+    
+    // 使用 Viseme 精确口型
+    if (this.useViseme && this.config.enableLipSync) {
+      // 生成 Viseme 序列并播放
+      avatarController.speakWithViseme(text, estimatedDuration);
+      
+      // 分析文本触发微表情
+      avatarController.analyzeTextForMicroExpression(text);
+    }
+    
+    // 同时连接传统口型同步 (作为备用)
+    if (this.config.enableLipSync && !this.useViseme) {
       try {
         await this.lipSyncDriver.connect(audio);
         this.lipSyncDriver.start();
@@ -274,16 +323,22 @@ export class AvatarSystem {
     return new Promise((resolve, reject) => {
       audio.onended = () => {
         this.lipSyncDriver.stop();
+        visemeDriver.stop();
+        microExpressionSystem.setSpeaking(false);
         resolve();
       };
       
       audio.onerror = (e) => {
         this.lipSyncDriver.stop();
+        visemeDriver.stop();
+        microExpressionSystem.setSpeaking(false);
         reject(e);
       };
 
       audio.play().catch((e) => {
         this.lipSyncDriver.stop();
+        visemeDriver.stop();
+        microExpressionSystem.setSpeaking(false);
         reject(e);
       });
     });

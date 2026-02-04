@@ -3,14 +3,19 @@
  * 
  * 这是初音未来的灵魂控制器
  * 
- * v3.0 - SOTA 生命动画版
+ * v4.0 - SOTA 完整版
  * - 扩展表情系统 (4 → 24 种表情)
  * - 表情混合/过渡动画
  * - 自动衰减系统
  * - ✨ 自动眨眼系统 (随机间隔，自然眨眼)
  * - ✨ 呼吸动画 (轻微身体起伏)
  * - ✨ 待机微动作 (轻微摇摆)
+ * - ✨ Viseme 精确口型同步
+ * - ✨ 微表情系统 (眉毛、眼神、嘴角微动)
  */
+
+import { visemeDriver, type Viseme } from './VisemeDriver';
+import { microExpressionSystem } from './MicroExpressionSystem';
 
 import type { Live2DModel } from 'pixi-live2d-display';
 
@@ -1103,6 +1108,242 @@ export class AvatarController {
     }
   }
 
+  // ========== Phase 10: Viseme & 微表情系统 ==========
+
+  private visemeEnabled = true;
+  private microExpressionEnabled = true;
+  private visemeUnsubscribe: (() => void) | null = null;
+  private microExpressionUnsubscribe: (() => void) | null = null;
+
+  /**
+   * 初始化 Viseme 和微表情系统
+   */
+  initAdvancedSystems() {
+    // 订阅 Viseme 口型参数
+    this.visemeUnsubscribe = visemeDriver.onMouthParams((params) => {
+      if (!this.visemeEnabled || !this.model?.internalModel) return;
+      
+      // 应用口型参数
+      this.setMouthOpenY(params.mouthOpenY);
+      this.applyMouthWidth(params.mouthWidth);
+      this.applyLipRound(params.lipRound);
+    });
+
+    // 订阅微表情参数
+    this.microExpressionUnsubscribe = microExpressionSystem.onParams((params) => {
+      if (!this.microExpressionEnabled || !this.model?.internalModel) return;
+      
+      // 应用微表情参数
+      this.applyMicroExpressionParams(params);
+    });
+
+    // 启动微表情系统
+    microExpressionSystem.start();
+    
+    console.log('[AvatarController] 高级系统已初始化 (Viseme + 微表情)');
+  }
+
+  /**
+   * 启用/禁用 Viseme 口型系统
+   */
+  setVisemeEnabled(enabled: boolean) {
+    this.visemeEnabled = enabled;
+    if (!enabled) {
+      visemeDriver.stop();
+    }
+  }
+
+  /**
+   * 启用/禁用微表情系统
+   */
+  setMicroExpressionEnabled(enabled: boolean) {
+    this.microExpressionEnabled = enabled;
+    if (enabled) {
+      microExpressionSystem.start();
+    } else {
+      microExpressionSystem.stop();
+    }
+  }
+
+  /**
+   * 使用 Viseme 系统播放语音口型
+   */
+  speakWithViseme(text: string, durationMs: number) {
+    const sequence = visemeDriver.generateVisemeSequence(text, durationMs);
+    visemeDriver.playSequence(sequence);
+    microExpressionSystem.setSpeaking(true);
+    
+    // 语音结束后重置
+    setTimeout(() => {
+      microExpressionSystem.setSpeaking(false);
+    }, durationMs);
+  }
+
+  /**
+   * 设置 Viseme (手动控制)
+   */
+  setViseme(viseme: Viseme) {
+    visemeDriver.setViseme(viseme);
+  }
+
+  /**
+   * 触发反应性微表情
+   */
+  triggerMicroReaction(type: 'interest' | 'surprise_light' | 'thinking' | 'doubt' | 'agreement' | 'realization') {
+    microExpressionSystem.triggerReaction(type);
+  }
+
+  /**
+   * 基于文本分析触发微表情
+   */
+  analyzeTextForMicroExpression(text: string) {
+    microExpressionSystem.analyzeAndReact(text);
+  }
+
+  /**
+   * 应用嘴巴宽度参数
+   */
+  private applyMouthWidth(width: number) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (model?.parameters) {
+          const paramNames = ['ParamMouthWidth', 'PARAM_MOUTH_WIDTH', 'ParamMouthForm'];
+          for (const name of paramNames) {
+            const idx = model.parameters.ids?.indexOf(name);
+            if (idx >= 0) {
+              // 转换为 -1 到 1 范围
+              model.parameters.values[idx] = (width - 0.5) * 2;
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 应用嘴唇圆润度参数
+   */
+  private applyLipRound(round: number) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (model?.parameters) {
+          const paramNames = ['ParamMouthRound', 'PARAM_MOUTH_ROUND'];
+          for (const name of paramNames) {
+            const idx = model.parameters.ids?.indexOf(name);
+            if (idx >= 0) {
+              model.parameters.values[idx] = round;
+              break;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 应用微表情参数
+   */
+  private applyMicroExpressionParams(params: {
+    browL: number;
+    browR: number;
+    eyeLookX: number;
+    eyeLookY: number;
+    eyeWideL: number;
+    eyeWideR: number;
+    mouthCornerL: number;
+    mouthCornerR: number;
+    cheekPuff: number;
+    noseWrinkle: number;
+  }) {
+    if (!this.model?.internalModel) return;
+    
+    const coreModel = this.model.internalModel.coreModel as any;
+    
+    try {
+      if (this.cubismVersion >= 3) {
+        const model = coreModel?._model;
+        if (!model?.parameters) return;
+        
+        // 眉毛
+        this.setParam(model, ['ParamBrowLY', 'PARAM_BROW_L_Y'], params.browL);
+        this.setParam(model, ['ParamBrowRY', 'PARAM_BROW_R_Y'], params.browR);
+        
+        // 眼神 (增量添加，不覆盖鼠标跟随)
+        const currentX = this.getParam(model, ['ParamEyeBallX', 'PARAM_EYE_BALL_X']) || 0;
+        const currentY = this.getParam(model, ['ParamEyeBallY', 'PARAM_EYE_BALL_Y']) || 0;
+        this.setParam(model, ['ParamEyeBallX', 'PARAM_EYE_BALL_X'], currentX + params.eyeLookX);
+        this.setParam(model, ['ParamEyeBallY', 'PARAM_EYE_BALL_Y'], currentY + params.eyeLookY);
+        
+        // 眼睛睁大
+        this.setParam(model, ['ParamEyeLWide', 'PARAM_EYE_L_WIDE'], params.eyeWideL);
+        this.setParam(model, ['ParamEyeRWide', 'PARAM_EYE_R_WIDE'], params.eyeWideR);
+        
+        // 嘴角 (仅在不说话时应用)
+        if (!microExpressionSystem['isSpeaking']) {
+          this.setParam(model, ['ParamMouthCornerL', 'PARAM_MOUTH_CORNER_L'], params.mouthCornerL);
+          this.setParam(model, ['ParamMouthCornerR', 'PARAM_MOUTH_CORNER_R'], params.mouthCornerR);
+        }
+        
+        // 鼓腮
+        this.setParam(model, ['ParamCheekPuff', 'PARAM_CHEEK_PUFF'], params.cheekPuff);
+        
+        // 皱鼻 (如果模型支持)
+        this.setParam(model, ['ParamNoseWrinkle', 'PARAM_NOSE_WRINKLE'], params.noseWrinkle);
+      }
+    } catch (e) {
+      // 静默处理
+    }
+  }
+
+  /**
+   * 设置模型参数 (辅助方法)
+   */
+  private setParam(model: any, names: string[], value: number) {
+    for (const name of names) {
+      const idx = model.parameters?.ids?.indexOf(name);
+      if (idx >= 0) {
+        model.parameters.values[idx] = value;
+        return;
+      }
+    }
+  }
+
+  /**
+   * 获取模型参数 (辅助方法)
+   */
+  private getParam(model: any, names: string[]): number | null {
+    for (const name of names) {
+      const idx = model.parameters?.ids?.indexOf(name);
+      if (idx >= 0) {
+        return model.parameters.values[idx];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 同步情绪到所有系统
+   */
+  syncEmotionToSystems(emotion: string) {
+    visemeDriver.setEmotion(emotion);
+    microExpressionSystem.setEmotion(emotion);
+  }
+
   /**
    * 销毁
    */
@@ -1124,6 +1365,18 @@ export class AvatarController {
       clearTimeout(this.blinkTimeout);
       this.blinkTimeout = null;
     }
+    
+    // 清理 Viseme 和微表情系统
+    if (this.visemeUnsubscribe) {
+      this.visemeUnsubscribe();
+      this.visemeUnsubscribe = null;
+    }
+    if (this.microExpressionUnsubscribe) {
+      this.microExpressionUnsubscribe();
+      this.microExpressionUnsubscribe = null;
+    }
+    visemeDriver.destroy();
+    microExpressionSystem.destroy();
     
     this.model = null;
     this.availableExpressions = [];
