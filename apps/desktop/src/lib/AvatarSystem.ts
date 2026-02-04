@@ -3,10 +3,11 @@
  * 
  * 将 OpenClaw 连接、情绪检测、TTS、口型同步统一管理
  * 
- * v3.0 - 集成表情序列系统
+ * v4.0 - SOTA Round 6: 情绪上下文引擎
  * - Viseme 精确口型
  * - 微表情系统
- * - ✨ 表情序列动画 (复合表情、情绪惯性)
+ * - 表情序列动画 (复合表情、情绪惯性)
+ * - ✨ 情绪上下文引擎 (对话基调、话题识别、情绪惯性)
  */
 
 import { avatarController, type Expression } from './AvatarController';
@@ -17,6 +18,7 @@ import { LipSyncDriver } from './LipSyncDriver';
 import { visemeDriver } from './VisemeDriver';
 import { microExpressionSystem } from './MicroExpressionSystem';
 import { expressionSequencer, analyzeTextForSequence } from './ExpressionSequencer';
+import { emotionContextEngine, type ConversationTone } from './EmotionContextEngine';
 
 export interface AvatarSystemConfig {
   gatewayUrl?: string;
@@ -192,8 +194,48 @@ export class AvatarSystem {
     }
   }
 
+  // 是否使用情绪上下文引擎 (默认启用)
+  private useContextEngine = true;
+
   /**
-   * 检测并应用情绪
+   * 启用/禁用情绪上下文引擎
+   */
+  setUseContextEngine(enabled: boolean) {
+    this.useContextEngine = enabled;
+    console.log('[AvatarSystem] 情绪上下文引擎:', enabled ? '启用' : '禁用');
+  }
+
+  /**
+   * 获取对话基调
+   */
+  getConversationTone(): ConversationTone {
+    return emotionContextEngine.getConversationTone();
+  }
+
+  /**
+   * 获取情绪趋势分析
+   */
+  getEmotionTrend() {
+    return emotionContextEngine.analyzeEmotionTrend();
+  }
+
+  /**
+   * 获取情绪上下文调试信息
+   */
+  getEmotionContextDebug(): string {
+    return emotionContextEngine.getDebugSummary();
+  }
+
+  /**
+   * 重置情绪上下文
+   */
+  resetEmotionContext() {
+    emotionContextEngine.reset();
+    console.log('[AvatarSystem] 情绪上下文已重置');
+  }
+
+  /**
+   * 检测并应用情绪 (v4.0 - 带上下文感知)
    */
   private detectAndApplyEmotion(text: string) {
     // 首先尝试匹配表情序列（更丰富的表情反应）
@@ -202,20 +244,45 @@ export class AvatarSystem {
       return;
     }
     
+    // 基础情绪检测
     const result = detectEmotion(text);
     
+    let finalEmotion = result.emotion;
+    let finalIntensity = result.confidence;
+    
+    // 使用上下文引擎增强情绪检测
+    if (this.useContextEngine) {
+      const contextResult = emotionContextEngine.processText(
+        text,
+        result.emotion,
+        result.confidence
+      );
+      
+      finalEmotion = contextResult.emotion;
+      finalIntensity = contextResult.intensity;
+      
+      // 记录上下文影响
+      if (contextResult.influences.length > 1) {
+        const sources = contextResult.influences.map(i => `${i.source}:${i.emotion}`).join(', ');
+        console.log('[AvatarSystem] 情绪上下文:', sources, '→', finalEmotion);
+      }
+    }
+    
     // 只有置信度足够高才切换表情
-    if (result.confidence > 0.3 && result.emotion !== 'neutral') {
+    if (finalIntensity > 0.3 && finalEmotion !== 'neutral') {
       // 使用智能表情切换（带惯性）
       if (this.useSequencer) {
-        expressionSequencer.setEmotionSmart(result.emotion);
+        expressionSequencer.setEmotionSmart(finalEmotion);
       } else {
-        this.setEmotion(result.emotion);
+        this.setEmotion(finalEmotion);
       }
       
-      // 设置自动恢复 neutral
-      const duration = getEmotionDuration(result);
-      this.scheduleEmotionReset(duration);
+      // 设置自动恢复 - 基于上下文调整持续时间
+      const baseDuration = getEmotionDuration(result);
+      const tone = emotionContextEngine.getConversationTone();
+      // 如果对话基调和当前情绪一致，延长持续时间
+      const durationMultiplier = tone.baseEmotion === finalEmotion ? 1.5 : 1.0;
+      this.scheduleEmotionReset(baseDuration * durationMultiplier);
     }
   }
   

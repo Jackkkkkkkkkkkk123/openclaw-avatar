@@ -9,6 +9,7 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js';
 import { performanceMonitor, type PerformanceMetrics } from '../lib/PerformanceMonitor';
 import { avatarController } from '../lib/AvatarController';
+import { emotionContextEngine } from '../lib/EmotionContextEngine';
 import type { SystemState } from '../lib/AvatarSystem';
 import './DevPanel.css';
 
@@ -22,10 +23,15 @@ export interface DevPanelProps {
 export function DevPanel(props: DevPanelProps) {
   const [metrics, setMetrics] = createSignal<PerformanceMetrics | null>(null);
   const [expanded, setExpanded] = createSignal(false);
-  const [activeTab, setActiveTab] = createSignal<'performance' | 'avatar' | 'system'>('performance');
+  const [activeTab, setActiveTab] = createSignal<'performance' | 'avatar' | 'system' | 'context'>('performance');
   
   // 生命动画状态
   const [lifeConfig, setLifeConfig] = createSignal(avatarController.getLifeConfig());
+  
+  // 情绪上下文状态
+  const [emotionTone, setEmotionTone] = createSignal(emotionContextEngine.getConversationTone());
+  const [emotionTrend, setEmotionTrend] = createSignal(emotionContextEngine.analyzeEmotionTrend());
+  const [emotionHistory, setEmotionHistory] = createSignal(emotionContextEngine.getEmotionHistory());
   
   onMount(() => {
     // 订阅性能指标
@@ -33,9 +39,12 @@ export function DevPanel(props: DevPanelProps) {
       setMetrics(m);
     });
     
-    // 定期更新生命动画配置（检测外部变化）
+    // 定期更新生命动画配置和情绪上下文（检测外部变化）
     const interval = setInterval(() => {
       setLifeConfig(avatarController.getLifeConfig());
+      setEmotionTone(emotionContextEngine.getConversationTone());
+      setEmotionTrend(emotionContextEngine.analyzeEmotionTrend());
+      setEmotionHistory(emotionContextEngine.getEmotionHistory());
     }, 1000);
     
     onCleanup(() => {
@@ -134,6 +143,12 @@ export function DevPanel(props: DevPanelProps) {
                 onClick={() => setActiveTab('avatar')}
               >
                 🎭 Avatar
+              </button>
+              <button 
+                class={`dev-panel__tab ${activeTab() === 'context' ? 'active' : ''}`}
+                onClick={() => setActiveTab('context')}
+              >
+                🧠 上下文
               </button>
               <button 
                 class={`dev-panel__tab ${activeTab() === 'system' ? 'active' : ''}`}
@@ -241,6 +256,70 @@ export function DevPanel(props: DevPanelProps) {
                 
                 <button class="dev-panel__btn" onClick={triggerBlink}>
                   👁️ 手动眨眼
+                </button>
+              </div>
+            </Show>
+            
+            {/* 情绪上下文面板 */}
+            <Show when={activeTab() === 'context'}>
+              <div class="dev-panel__section">
+                <h4>对话基调</h4>
+                
+                <div class="dev-panel__info">
+                  <div class="info-row">
+                    <span>基调情绪</span>
+                    <span>{emotionTone().baseEmotion}</span>
+                  </div>
+                  <div class="info-row">
+                    <span>稳定性</span>
+                    <span>{(emotionTone().stability * 100).toFixed(0)}%</span>
+                  </div>
+                  <div class="info-row">
+                    <span>当前话题</span>
+                    <span>{emotionTone().topicStack[0] || '无'}</span>
+                  </div>
+                </div>
+                
+                <h4>情绪趋势</h4>
+                
+                <div class="dev-panel__info">
+                  <div class="info-row">
+                    <span>主导情绪</span>
+                    <span>{emotionTrend().dominant}</span>
+                  </div>
+                  <div class="info-row">
+                    <span>趋势</span>
+                    <span>{emotionTrend().trend === 'improving' ? '📈 好转' : emotionTrend().trend === 'declining' ? '📉 下降' : '➡️ 稳定'}</span>
+                  </div>
+                  <div class="info-row">
+                    <span>波动性</span>
+                    <span>{(emotionTrend().volatility * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                
+                <h4>情绪历史 ({emotionHistory().length})</h4>
+                <div class="dev-panel__list">
+                  <For each={emotionHistory().slice(0, 5)}>
+                    {(entry) => (
+                      <div class="dev-panel__history-item">
+                        <span class="emotion-tag">{entry.emotion}</span>
+                        <span class="intensity">{(entry.intensity * 100).toFixed(0)}%</span>
+                        {entry.topic && <span class="topic">[{entry.topic}]</span>}
+                      </div>
+                    )}
+                  </For>
+                </div>
+                
+                <button 
+                  class="dev-panel__btn" 
+                  onClick={() => {
+                    emotionContextEngine.reset();
+                    setEmotionTone(emotionContextEngine.getConversationTone());
+                    setEmotionTrend(emotionContextEngine.analyzeEmotionTrend());
+                    setEmotionHistory(emotionContextEngine.getEmotionHistory());
+                  }}
+                >
+                  🔄 重置上下文
                 </button>
               </div>
             </Show>

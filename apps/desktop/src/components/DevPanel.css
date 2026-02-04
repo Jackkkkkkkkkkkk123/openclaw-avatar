@@ -266,6 +266,37 @@
   word-break: break-all;
 }
 
+/* 情绪历史记录 */
+.dev-panel__history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.dev-panel__history-item .emotion-tag {
+  padding: 1px 5px;
+  background: rgba(57, 197, 187, 0.2);
+  border-radius: 3px;
+  color: var(--dev-accent);
+  font-weight: 500;
+}
+
+.dev-panel__history-item .intensity {
+  color: var(--dev-text-dim);
+  font-size: 10px;
+}
+
+.dev-panel__history-item .topic {
+  color: #888;
+  font-size: 10px;
+  font-style: italic;
+}
+
 /* 滚动条 */
 .dev-panel__content::-webkit-scrollbar {
   width: 6px;
