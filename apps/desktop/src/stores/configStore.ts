@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: AppConfig = {
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979', // 内置 Gateway Token
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
   bridgeUrl: 'http://localhost:12394',  // OpenClaw Bridge
-  useBridge: true,  // 默认使用 Bridge 模式（更稳定）
+  useBridge: false,  // Bridge 有 bug，暂时用 WebSocket
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',
   modelName: 'Lain',
@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: AppConfig = {
   enableLighting: false,  // 动态光照（花架子，禁用）
 };
 
-const STORAGE_KEY = 'openclaw-avatar-config-v3'; // v3: 重置 UI 配置（控制面板收起）
+const STORAGE_KEY = 'openclaw-avatar-config-v4'; // v4: 禁用 Bridge（有 bug）
 
 // 内置配置（不允许用户覆盖）
 const BUILTIN_CONFIG = {
