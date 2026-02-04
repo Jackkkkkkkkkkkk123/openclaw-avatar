@@ -66,6 +66,16 @@ function App() {
         }]);
       }
     });
+    
+    // 自动连接 OpenClaw Gateway
+    avatarSystem.updateConfig({
+      gatewayUrl: config().gatewayUrl,
+      gatewayToken: config().gatewayToken,
+    });
+    avatarSystem.connect().catch(err => {
+      console.warn('[App] OpenClaw 自动连接失败:', err);
+      setStatusMessage('OpenClaw 连接失败，使用离线模式');
+    });
   }
   
   // Avatar 加载失败
@@ -330,10 +340,11 @@ function App() {
               <div class="control-group">
                 <h4>动作</h4>
                 <div class="control-buttons">
-                  <Button onClick={() => playMotion('idle')}>🧘 Idle</Button>
-                  <Button onClick={() => playMotion('tap_body')}>👋 摸身体</Button>
-                  <Button onClick={() => playMotion('shake')}>🫨 摇晃</Button>
-                  <Button onClick={() => playMotion('flick_head')}>👆 摸头</Button>
+                  <Button onClick={() => playMotion('Idle')}>🧘 待机</Button>
+                  <Button onClick={() => playMotion('zuoshou')}>👈 左手挥</Button>
+                  <Button onClick={() => playMotion('youshou')}>👉 右手挥</Button>
+                  <Button onClick={() => playMotion('zuoshou_goodbye')}>👋 左手再见</Button>
+                  <Button onClick={() => playMotion('youshou_goodbye')}>🙋 右手再见</Button>
                 </div>
               </div>
               

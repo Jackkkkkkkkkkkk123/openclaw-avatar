@@ -315,7 +315,8 @@ body::before {
   z-index: -1;
 }
 
-/* Scanline effect — subtle CRT nostalgia */
+/* Scanline effect — disabled for performance */
+/* 
 body::after {
   content: '';
   position: fixed;
@@ -331,6 +332,7 @@ body::after {
   z-index: 9999;
   opacity: 0.3;
 }
+*/
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Selection & Focus States
