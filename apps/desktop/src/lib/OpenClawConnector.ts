@@ -194,6 +194,7 @@ export class OpenClawConnector {
   private async sendConnect(): Promise<void> {
     const connectId = generateId();
     
+    // 使用 "cli" 作为 client.id 和 client.mode，这是 OpenClaw 认可的客户端类型
     const connectRequest = {
       type: 'req',
       id: connectId,
@@ -202,10 +203,10 @@ export class OpenClawConnector {
         minProtocol: PROTOCOL_VERSION,
         maxProtocol: PROTOCOL_VERSION,
         client: {
-          id: 'openclaw-avatar',
+          id: 'cli',  // 必须使用预定义的客户端 ID
           version: '0.1.0',
           platform: 'web',
-          mode: 'operator'
+          mode: 'cli'  // 必须与 id 匹配
         },
         role: 'operator',
         scopes: ['operator.read', 'operator.write'],
@@ -217,11 +218,8 @@ export class OpenClawConnector {
           deviceToken: this.deviceToken || undefined
         },
         locale: navigator.language || 'zh-CN',
-        userAgent: 'openclaw-avatar/0.1.0',
-        device: {
-          id: getDeviceId(),
-          // 对于本地连接，不需要签名
-        }
+        userAgent: 'openclaw-avatar/0.1.0'
+        // 本地连接不需要 device 签名
       }
     };
 
@@ -288,25 +286,41 @@ export class OpenClawConnector {
 
   /**
    * 发送消息给 AI Agent
+   * 
+   * 注意：agent 方法会返回流式响应，通过 onMessage 订阅接收
    */
-  async sendMessage(text: string): Promise<boolean> {
+  async sendMessage(text: string, options?: {
+    sessionKey?: string;
+    thinkingLevel?: 'off' | 'minimal' | 'low' | 'medium' | 'high';
+    model?: string;
+  }): Promise<boolean> {
     if (!this.isConnected) {
       console.error('[OpenClaw] 未连接，无法发送消息');
       return false;
     }
 
     try {
-      console.log('[OpenClaw] 发送消息:', text);
+      console.log('[OpenClaw] 发送消息:', text.slice(0, 50));
+      
+      // 清空流缓冲区
+      this.currentStreamBuffer = '';
       
       // 使用 agent 方法发送消息
+      // 响应会通过 agent 事件流式返回
       const response = await this.sendRequest('agent', {
         message: text,
         idempotencyKey: generateId(),
-        // 可选参数
-        // thinkingLevel: 'low',
-        // model: 'anthropic/claude-sonnet-4-20250514'
+        sessionKey: options?.sessionKey,
+        thinkingLevel: options?.thinkingLevel,
+        model: options?.model,
       });
 
+      // agent 方法返回 ack，包含 runId
+      if (response?.status === 'accepted') {
+        console.log('[OpenClaw] ✅ 消息已接受, runId:', response.runId);
+        return true;
+      }
+      
       console.log('[OpenClaw] Agent 响应:', response);
       return true;
     } catch (e) {
@@ -345,38 +359,81 @@ export class OpenClawConnector {
 
   /**
    * 处理 Agent 事件 (流式响应)
+   * 
+   * 事件格式：
+   * {"type":"event","event":"agent","payload":{
+   *   "runId":"...",
+   *   "stream":"assistant" | "tool" | "thinking",
+   *   "data":{"text":"累积文本","delta":"增量文本"},
+   *   "sessionKey":"...",
+   *   "seq":7
+   * }}
    */
   private handleAgentEvent(payload: any) {
-    console.log('[OpenClaw] Agent 事件:', payload);
+    // console.log('[OpenClaw] Agent 事件:', payload.stream, payload.data?.delta?.slice(0, 20));
 
-    // 处理流式文本
-    if (payload.type === 'text' || payload.type === 'chunk') {
+    // 流式文本 (assistant 流)
+    if (payload.stream === 'assistant' && payload.data) {
+      const delta = payload.data.delta || '';
+      if (delta) {
+        const chunk: MessageChunk = {
+          type: 'text',
+          content: delta,
+          timestamp: Date.now()
+        };
+        this.currentStreamBuffer = payload.data.text || (this.currentStreamBuffer + delta);
+        this.notifyHandlers(chunk);
+      }
+    }
+    // 思考流 (可选显示)
+    else if (payload.stream === 'thinking' && payload.data) {
       const chunk: MessageChunk = {
-        type: 'text',
-        content: payload.text || payload.content || '',
+        type: 'thinking' as any, // 扩展类型
+        content: payload.data.delta || payload.data.text || '',
         timestamp: Date.now()
       };
-      this.currentStreamBuffer += chunk.content;
       this.notifyHandlers(chunk);
     }
-    // 处理完成
-    else if (payload.type === 'end' || payload.type === 'done' || payload.status === 'completed') {
+    // 工具调用
+    else if (payload.stream === 'tool') {
+      const chunk: MessageChunk = {
+        type: 'tool' as any,
+        content: JSON.stringify(payload.data),
+        timestamp: Date.now()
+      };
+      this.notifyHandlers(chunk);
+    }
+    // 响应完成
+    else if (payload.status === 'completed' || payload.status === 'done') {
       const chunk: MessageChunk = {
         type: 'end',
-        content: this.currentStreamBuffer || payload.text || payload.content || '',
+        content: this.currentStreamBuffer || payload.data?.text || '',
         timestamp: Date.now()
       };
       this.notifyHandlers(chunk);
       this.currentStreamBuffer = '';
+      console.log('[OpenClaw] ✅ 响应完成');
     }
-    // 处理错误
-    else if (payload.type === 'error' || payload.status === 'error') {
+    // 响应被中止
+    else if (payload.status === 'aborted') {
       const chunk: MessageChunk = {
-        type: 'error',
-        content: payload.error || payload.message || 'Unknown error',
+        type: 'end',
+        content: this.currentStreamBuffer,
         timestamp: Date.now()
       };
       this.notifyHandlers(chunk);
+      this.currentStreamBuffer = '';
+      console.log('[OpenClaw] ⏹️ 响应被中止');
+    }
+    // 错误
+    else if (payload.status === 'error' || payload.error) {
+      const chunk: MessageChunk = {
+        type: 'error',
+        content: payload.error?.message || payload.error || 'Unknown error',
+        timestamp: Date.now()
+      };
+      this.notifyHandlers(chunk);
+      this.currentStreamBuffer = '';
     }
   }
 

@@ -145,13 +145,14 @@ export class AvatarSystem {
       console.error('[AvatarSystem] 消息错误:', chunk.content);
       this.setEmotion('sad');
     }
-    else if (chunk.type === 'thinking') {
-      console.log('[AvatarSystem] 思考中:', chunk.content.slice(0, 50));
-      // 思考时显示中性表情
-      this.setEmotion('neutral');
+    else if ((chunk as any).type === 'thinking') {
+      // 思考时可以显示一个 "思考中" 的状态
+      console.log('[AvatarSystem] 🤔 思考中...');
+      // 思考时保持当前表情或显示中性
     }
-    else if (chunk.type === 'tool') {
-      console.log('[AvatarSystem] 工具调用:', chunk.content.slice(0, 100));
+    else if ((chunk as any).type === 'tool') {
+      console.log('[AvatarSystem] 🔧 工具调用');
+      // 工具调用时可以显示一个忙碌的表情
     }
   }
 
