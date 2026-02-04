@@ -195,7 +195,7 @@ export class OpenClawConnector {
   private async sendConnect(): Promise<void> {
     const connectId = generateId();
     
-    // 使用与 Control UI 相同的客户端参数
+    // 使用 avatar 客户端参数（支持远程连接）
     const connectRequest = {
       type: 'req',
       id: connectId,
@@ -204,15 +204,15 @@ export class OpenClawConnector {
         minProtocol: PROTOCOL_VERSION,
         maxProtocol: PROTOCOL_VERSION,
         client: {
-          id: 'openclaw-control-ui',  // Control UI 客户端 ID
+          id: 'openclaw-avatar',  // Avatar 专用客户端 ID
           version: '1.0.0',
           platform: typeof navigator !== 'undefined' ? navigator.platform || 'web' : 'web',
-          mode: 'webchat',  // webchat 模式
+          mode: 'avatar',  // avatar 模式
           instanceId: `avatar-${getDeviceId()}`  // 唯一实例 ID
         },
-        // Control UI 模式不需要 role、scopes、commands、permissions
-        scopes: [],
-        caps: [],
+        role: 'viewer',  // 查看者角色
+        scopes: ['chat', 'events'],  // 请求的权限
+        caps: ['streaming'],  // 支持流式响应
         auth: {
           token: this.config.token || undefined,
           deviceToken: this.deviceToken || undefined

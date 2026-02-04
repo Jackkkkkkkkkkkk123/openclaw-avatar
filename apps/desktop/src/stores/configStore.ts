@@ -27,10 +27,10 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  gatewayUrl: 'ws://localhost:18789/ws',
+  gatewayUrl: 'wss://ws.sngxai.com/ws',  // 公网 WebSocket
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979', // 内置 Gateway Token
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
-  bridgeUrl: 'http://localhost:12394',  // OpenClaw Bridge
+  bridgeUrl: 'https://ws.sngxai.com',  // 公网 Bridge
   useBridge: false,  // Bridge 有 bug，暂时用 WebSocket
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',
@@ -48,10 +48,10 @@ const STORAGE_KEY = 'openclaw-avatar-config-v4'; // v4: 禁用 Bridge（有 bug�
 
 // 内置配置（不允许用户覆盖）
 const BUILTIN_CONFIG = {
-  gatewayUrl: 'ws://localhost:18789/ws',
+  gatewayUrl: 'wss://ws.sngxai.com/ws',  // 公网 WebSocket
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979',
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3',
-  bridgeUrl: 'http://localhost:12394',
+  bridgeUrl: 'https://ws.sngxai.com',  // 公网 Bridge
 };
 
 // 从 localStorage 加载配置（连接配置始终使用内置值）

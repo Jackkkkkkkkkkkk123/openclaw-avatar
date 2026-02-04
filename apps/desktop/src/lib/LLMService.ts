@@ -10,17 +10,32 @@
 
 // 延迟导入以避免在测试环境中的 localStorage 问题
 let _openClawConnector: any = null;
+let _connectorPromise: Promise<any> | null = null;
+
+async function getConnectorAsync() {
+  if (_openClawConnector) {
+    return _openClawConnector;
+  }
+  
+  if (!_connectorPromise) {
+    _connectorPromise = import('./OpenClawConnector')
+      .then(module => {
+        _openClawConnector = module.getOpenClawConnector();
+        console.log('[LLMService] OpenClawConnector loaded successfully');
+        return _openClawConnector;
+      })
+      .catch(e => {
+        console.warn('[LLMService] Failed to load OpenClawConnector:', e);
+        _connectorPromise = null;
+        return null;
+      });
+  }
+  
+  return _connectorPromise;
+}
 
 function getConnector() {
-  if (!_openClawConnector) {
-    try {
-      const { getOpenClawConnector } = require('./OpenClawConnector');
-      _openClawConnector = getOpenClawConnector();
-    } catch (e) {
-      console.warn('[LLMService] Failed to load OpenClawConnector:', e);
-      return null;
-    }
-  }
+  // 同步版本 - 返回已加载的 connector 或 null
   return _openClawConnector;
 }
 
@@ -115,17 +130,25 @@ class LLMServiceImpl {
   private currentRequestId: string | null = null;
   private responseBuffer: string = '';
   private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
   
   constructor() {
-    this.setupMessageHandler();
+    // 异步初始化 connector
+    this.initPromise = this.initializeAsync();
   }
   
-  private setupMessageHandler() {
+  private async initializeAsync(): Promise<void> {
+    const connector = await getConnectorAsync();
+    if (connector) {
+      this.setupMessageHandler(connector);
+    }
+  }
+  
+  private setupMessageHandler(connector: any) {
     if (this.isInitialized) return;
     this.isInitialized = true;
     
-    const connector = getConnector();
-    if (!connector) return;
+    console.log('[LLMService] Setting up message handler');
     
     connector.onMessage((chunk: MessageChunk) => {
       if (!this.currentRequestId) return;
@@ -160,6 +183,15 @@ class LLMServiceImpl {
   }
   
   /**
+   * 等待初始化完成
+   */
+  async waitForInit(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+  }
+  
+  /**
    * 检查是否已连接到 OpenClaw
    */
   isConnected(): boolean {
@@ -171,6 +203,9 @@ class LLMServiceImpl {
    * 发送 LLM 请求
    */
   async query(request: LLMRequest): Promise<LLMResponse> {
+    // 确保 connector 已加载
+    await this.waitForInit();
+    
     const connector = getConnector();
     
     if (!connector || connector.getStatus() !== 'connected') {
