@@ -23,8 +23,8 @@ const DEFAULT_CONFIG: AppConfig = {
   gatewayUrl: 'ws://localhost:18789/ws',
   fishApiKey: '',
   theme: 'dark',
-  modelPath: '/live2d/shizuku/shizuku.model.json',
-  modelName: 'Shizuku',
+  modelPath: '/live2d/001/0A-原档整理(1).model3.json',
+  modelName: 'Lain',
   showChat: true,
   chatPosition: 'right',
   controlsExpanded: true,
@@ -87,9 +87,9 @@ export interface ModelInfo {
 
 export const AVAILABLE_MODELS: ModelInfo[] = [
   {
-    name: '初音未来',
+    name: 'Lain',
     path: '/live2d/001/0A-原档整理(1).model3.json',
-    description: '白发角色 - Cubism 3',
+    description: '白发角色 - Cubism 3 (默认)',
   },
   {
     name: 'Shizuku',
