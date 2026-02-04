@@ -912,6 +912,8 @@ export class AvatarSystem {
         this.bridgeConnector.onStatusChange((status) => {
           this.updateState({ connectionStatus: status });
         });
+        // 主动更新状态为已连接（因为 onStatusChange 是在 connect 后注册的）
+        this.updateState({ connectionStatus: 'connected' });
         console.log('[AvatarSystem] ✅ Bridge 连接成功！初音未来已上线~');
         return;
       } catch (e) {

@@ -34,12 +34,20 @@ function makeProxyRequest(options, postData) {
         return;
       }
 
+      // 过滤掉 undefined 的 headers
+      const headers = {};
+      for (const [key, value] of Object.entries(options.headers || {})) {
+        if (value !== undefined && value !== null) {
+          headers[key] = value;
+        }
+      }
+
       const httpsOptions = {
         hostname: targetUrl.hostname,
         port: 443,
         path: targetUrl.pathname,
         method: 'POST',
-        headers: options.headers,
+        headers: headers,
         socket: socket,
         agent: false,
       };
