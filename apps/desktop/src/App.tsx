@@ -208,11 +208,50 @@ function App() {
     
     setStatusMessage('TTS 测试中...');
     try {
-      avatarSystem.updateConfig({ fishApiKey: config().fishApiKey });
-      await avatarSystem.speak('你好，我是初音未来！今天的天气真不错呢~');
-      setStatusMessage('TTS 测试完成');
-    } catch (e) {
-      setStatusMessage(`TTS 错误: ${e}`);
+      // 直接测试音频播放能力
+      const proxyUrl = `http://${window.location.hostname}:14201`;
+      console.log('[TTS Test] 请求代理:', proxyUrl);
+      
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config().fishApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: '你好',
+          reference_id: '9dec9671824543b4a4f9f382dbf15748',
+          format: 'mp3',
+        }),
+      });
+      
+      console.log('[TTS Test] 响应状态:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      console.log('[TTS Test] 音频大小:', blob.size, 'bytes');
+      
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      
+      audio.onplay = () => console.log('[TTS Test] ▶️ 开始播放');
+      audio.onended = () => {
+        console.log('[TTS Test] ✅ 播放完成');
+        setStatusMessage('TTS 测试完成 ✅');
+      };
+      audio.onerror = (e) => {
+        console.error('[TTS Test] ❌ 播放错误:', e);
+        setStatusMessage(`音频播放错误: ${e}`);
+      };
+      
+      await audio.play();
+      setStatusMessage('正在播放...');
+    } catch (e: any) {
+      console.error('[TTS Test] 错误:', e);
+      setStatusMessage(`TTS 错误: ${e.message || e}`);
     }
   }
   
