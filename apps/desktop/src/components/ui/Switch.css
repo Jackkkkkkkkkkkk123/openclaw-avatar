@@ -1,0 +1,85 @@
+/* Switch 组件样式 */
+.ui-switch {
+  display: flex;
+}
+
+.ui-switch__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.ui-switch__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.ui-switch__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ui-switch__description {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ui-switch__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-switch__control {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ui-switch__control:hover {
+  border-color: var(--border-hover);
+}
+
+.ui-switch__control:focus-visible,
+.ui-switch__input:focus-visible + .ui-switch__control {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.ui-switch[data-checked] .ui-switch__control {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.ui-switch[data-disabled] .ui-switch__control {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ui-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.ui-switch[data-checked] .ui-switch__thumb {
+  transform: translateX(20px);
+}

@@ -1,0 +1,172 @@
+/* 全局主题变量 */
+
+/* 深色主题（默认） */
+:root,
+[data-theme="dark"] {
+  /* 主色调 - 初音未来绿 */
+  --primary: #39c5bb;
+  --primary-dark: #2da39a;
+  --primary-light: #5dd5cc;
+  --primary-alpha: rgba(57, 197, 187, 0.15);
+  
+  /* 背景色 */
+  --bg: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-tertiary: #1f1f1f;
+  
+  /* 文字色 */
+  --text: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  
+  /* 边框色 */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  
+  /* 语义色 */
+  --success: #2ecc71;
+  --warning: #f1c40f;
+  --danger: #e74c3c;
+  --info: #3498db;
+  
+  /* 特效 */
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.6);
+  
+  /* Avatar 舞台 */
+  --stage-bg-start: #1a1a2e;
+  --stage-bg-end: #16213e;
+}
+
+/* 浅色主题 */
+[data-theme="light"] {
+  /* 主色调 */
+  --primary: #39c5bb;
+  --primary-dark: #2da39a;
+  --primary-light: #5dd5cc;
+  --primary-alpha: rgba(57, 197, 187, 0.12);
+  
+  /* 背景色 */
+  --bg: #ffffff;
+  --bg-secondary: #f7f7f7;
+  --bg-tertiary: #efefef;
+  
+  /* 文字色 */
+  --text: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  
+  /* 边框色 */
+  --border: rgba(0, 0, 0, 0.1);
+  --border-hover: rgba(0, 0, 0, 0.2);
+  
+  /* 语义色 */
+  --success: #27ae60;
+  --warning: #f39c12;
+  --danger: #c0392b;
+  --info: #2980b9;
+  
+  /* 特效 */
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.15);
+  
+  /* Avatar 舞台 */
+  --stage-bg-start: #e8f4f8;
+  --stage-bg-end: #d4e8ef;
+}
+
+/* 基础重置 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+               'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 选中文本 */
+::selection {
+  background: var(--primary-alpha);
+  color: var(--text);
+}
+
+/* Focus 可见性 */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 链接 */
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* 动画 */
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 0.6; 
+    transform: scale(1.1); 
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

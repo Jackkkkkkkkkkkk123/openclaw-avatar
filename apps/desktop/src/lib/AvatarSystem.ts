@@ -6,7 +6,7 @@
 
 import { avatarController, type Expression } from './AvatarController';
 import { OpenClawConnector, type ConnectionStatus, type MessageChunk } from './OpenClawConnector';
-import { detectEmotion, getEmotionDuration, type EmotionResult } from './EmotionDetector';
+import { detectEmotion, getEmotionDuration } from './EmotionDetector';
 import { TTSService, createTTSService, type TTSResult } from './TTSService';
 import { LipSyncDriver } from './LipSyncDriver';
 
@@ -246,7 +246,7 @@ export class AvatarSystem {
   /**
    * 播放语音并同步口型
    */
-  private async speakWithLipSync(text: string, ttsResult: TTSResult): Promise<void> {
+  private async speakWithLipSync(_text: string, ttsResult: TTSResult): Promise<void> {
     const audio = new Audio(ttsResult.audioUrl);
     
     // 连接口型同步

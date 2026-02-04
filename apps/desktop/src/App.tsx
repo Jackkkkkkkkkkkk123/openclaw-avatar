@@ -1,21 +1,21 @@
-import { createSignal, createEffect, onMount, onCleanup, For } from "solid-js";
-import { invoke } from "@tauri-apps/api/core";
-import Avatar from "./components/Avatar";
-import { avatarController, type Expression, type MotionGroup } from "./lib/AvatarController";
-import { avatarSystem, type SystemState } from "./lib/AvatarSystem";
-import { lipSyncDriver } from "./lib/LipSyncDriver";
-import "./App.css";
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
+// OpenClaw Avatar - 主应用
+import { createSignal, onMount, onCleanup, Show } from 'solid-js';
+import Avatar from './components/Avatar';
+import { ChatPanel, type ChatMessage } from './components/ChatPanel';
+import { SettingsDialog } from './components/SettingsDialog';
+import { Button } from './components/ui';
+import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
+import { avatarSystem, type SystemState } from './lib/AvatarSystem';
+import { lipSyncDriver } from './lib/LipSyncDriver';
+import { config, updateConfig } from './stores/configStore';
+import { initTheme, toggleTheme, getThemeIcon } from './stores/themeStore';
+import './theme.css';
+import './App.css';
 
 function App() {
-  const [status, setStatus] = createSignal("初始化中...");
+  // 状态
   const [avatarReady, setAvatarReady] = createSignal(false);
-  const [currentExpression, setCurrentExpression] = createSignal<Expression>('neutral');
+  const [statusMessage, setStatusMessage] = createSignal('初始化中...');
   const [systemState, setSystemState] = createSignal<SystemState>({
     connectionStatus: 'disconnected',
     isSpeaking: false,
@@ -24,31 +24,36 @@ function App() {
     processingText: '',
   });
   
-  // 聊天相关
+  // 聊天消息
   const [chatMessages, setChatMessages] = createSignal<ChatMessage[]>([]);
-  const [inputText, setInputText] = createSignal('');
-  const [showChat, setShowChat] = createSignal(true);
   
-  // 配置
-  const [gatewayUrl, setGatewayUrl] = createSignal('ws://localhost:3939/ws');
-  const [fishApiKey, setFishApiKey] = createSignal('');
+  // UI 状态
   const [showSettings, setShowSettings] = createSignal(false);
-
+  const [controlsExpanded, setControlsExpanded] = createSignal(config().controlsExpanded);
+  
+  // 当前模型路径
+  const [modelPath, setModelPath] = createSignal(config().modelPath);
+  
+  // 初始化主题
+  onMount(() => {
+    initTheme();
+  });
+  
   // Avatar 加载完成
   function handleAvatarReady() {
     setAvatarReady(true);
-    setStatus("Avatar 已就绪");
+    setStatusMessage('Avatar 已就绪');
     
     // 订阅系统状态
     avatarSystem.onStateChange((state) => {
       setSystemState(state);
-      setCurrentExpression(state.currentEmotion);
     });
     
     // 订阅文本更新
     avatarSystem.onText((text, isComplete) => {
       if (isComplete && text) {
         setChatMessages(prev => [...prev, {
+          id: Date.now().toString(),
           role: 'assistant',
           content: text,
           timestamp: Date.now(),
@@ -56,69 +61,32 @@ function App() {
       }
     });
   }
-
+  
   // Avatar 加载失败
   function handleAvatarError(error: Error) {
-    setStatus(`Avatar 错误: ${error.message}`);
+    setStatusMessage(`Avatar 错误: ${error.message}`);
   }
-
-  // 切换表情
-  function changeExpression(expr: Expression) {
-    avatarSystem.setEmotion(expr);
-    setCurrentExpression(expr);
-  }
-
-  // 播放动作
-  function playMotion(group: MotionGroup) {
-    avatarController.playMotion(group);
-  }
-
-  // 连接 OpenClaw
-  async function connectOpenClaw() {
-    setStatus("连接中...");
-    try {
-      avatarSystem.updateConfig({
-        gatewayUrl: gatewayUrl(),
-        fishApiKey: fishApiKey(),
-      });
-      await avatarSystem.connect();
-      setStatus("已连接 OpenClaw");
-    } catch (e) {
-      setStatus(`连接失败: ${e}`);
-    }
-  }
-
-  // 断开连接
-  function disconnectOpenClaw() {
-    avatarSystem.disconnect();
-    setStatus("已断开");
-  }
-
+  
   // 发送消息
-  function sendMessage() {
-    const text = inputText().trim();
-    if (!text) return;
-    
+  function handleSendMessage(text: string) {
     // 添加用户消息
     setChatMessages(prev => [...prev, {
+      id: Date.now().toString(),
       role: 'user',
       content: text,
       timestamp: Date.now(),
     }]);
     
-    // 发送给 OpenClaw 或模拟
+    // 发送或模拟
     if (systemState().connectionStatus === 'connected') {
       avatarSystem.sendMessage(text);
     } else {
-      // 模拟回复（测试用）
       simulateResponse(text);
     }
-    
-    setInputText('');
   }
-
-  // 模拟回复（测试用）
-  async function simulateResponse(userText: string) {
+  
+  // 模拟回复
+  async function simulateResponse(_userText: string) {
     const responses = [
       "你好呀！很高兴见到你~ 😊",
       "哈哈，这个问题很有趣呢！",
@@ -128,250 +96,254 @@ function App() {
       "唉，这有点难过呢...",
     ];
     
-    // 模拟延迟
     await new Promise(r => setTimeout(r, 500));
-    
-    // 随机选择回复
     const response = responses[Math.floor(Math.random() * responses.length)];
-    
-    // 使用系统处理
     await avatarSystem.simulateResponse(response);
   }
-
-  // 测试 TTS（无需 API）
-  async function testLipSync() {
-    const testText = "你好，我是初音未来！很高兴认识你~";
-    setStatus("测试口型同步...");
-    
-    // 使用模拟口型
-    avatarSystem.setEmotion('happy');
-    await lipSyncDriver.simulateLipSync(testText, 3000);
-    avatarSystem.setEmotion('neutral');
-    
-    setStatus("口型测试完成");
+  
+  // 清空聊天记录
+  function handleClearHistory() {
+    setChatMessages([]);
   }
-
-  // 测试 TTS（需要 API Key）
+  
+  // 连接 OpenClaw
+  async function handleConnect() {
+    setStatusMessage('连接中...');
+    try {
+      avatarSystem.updateConfig({
+        gatewayUrl: config().gatewayUrl,
+        fishApiKey: config().fishApiKey,
+      });
+      await avatarSystem.connect();
+      setStatusMessage('已连接 OpenClaw');
+    } catch (e) {
+      setStatusMessage(`连接失败: ${e}`);
+    }
+  }
+  
+  // 断开连接
+  function handleDisconnect() {
+    avatarSystem.disconnect();
+    setStatusMessage('已断开');
+  }
+  
+  // 切换表情
+  function changeExpression(expr: Expression) {
+    avatarSystem.setEmotion(expr);
+  }
+  
+  // 播放动作
+  function playMotion(group: MotionGroup) {
+    avatarController.playMotion(group);
+  }
+  
+  // 测试口型
+  async function testLipSync() {
+    setStatusMessage('测试口型同步...');
+    avatarSystem.setEmotion('happy');
+    await lipSyncDriver.simulateLipSync('你好，我是初音未来！', 3000);
+    avatarSystem.setEmotion('neutral');
+    setStatusMessage('口型测试完成');
+  }
+  
+  // 测试 TTS
   async function testTTS() {
-    if (!fishApiKey()) {
-      setStatus("请先设置 Fish API Key");
+    if (!config().fishApiKey) {
+      setStatusMessage('请先设置 Fish API Key');
       setShowSettings(true);
       return;
     }
     
-    const testText = "你好，我是初音未来！今天的天气真不错呢~";
-    setStatus("TTS 测试中...");
-    
+    setStatusMessage('TTS 测试中...');
     try {
-      avatarSystem.updateConfig({ fishApiKey: fishApiKey() });
-      await avatarSystem.speak(testText);
-      setStatus("TTS 测试完成");
+      avatarSystem.updateConfig({ fishApiKey: config().fishApiKey });
+      await avatarSystem.speak('你好，我是初音未来！今天的天气真不错呢~');
+      setStatusMessage('TTS 测试完成');
     } catch (e) {
-      setStatus(`TTS 错误: ${e}`);
+      setStatusMessage(`TTS 错误: ${e}`);
     }
   }
-
-  // 键盘事件
-  function handleKeyPress(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  
+  // 模型变更
+  function handleModelChange(path: string, name: string) {
+    setModelPath(path);
+    setStatusMessage(`切换模型: ${name}`);
   }
-
+  
   // 清理
   onCleanup(() => {
     avatarSystem.destroy();
   });
-
+  
   return (
-    <main class="container">
-      <div class="avatar-header">
-        <h1>🎵 初音未来</h1>
-        <p class="subtitle">OpenClaw Avatar System</p>
-      </div>
-
-      <div class="main-layout">
-        {/* Live2D Avatar */}
-        <div class="avatar-stage">
+    <main class="app">
+      {/* 头部 */}
+      <header class="app-header">
+        <div class="app-header__brand">
+          <h1>🎵 初音未来</h1>
+          <span class="app-header__subtitle">OpenClaw Avatar System</span>
+        </div>
+        
+        <div class="app-header__actions">
+          <Button variant="ghost" size="sm" onClick={toggleTheme} title="切换主题">
+            {getThemeIcon(config().theme)}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+            ⚙️
+          </Button>
+        </div>
+      </header>
+      
+      {/* 主区域 */}
+      <div class={`app-main ${config().chatPosition === 'left' ? 'app-main--chat-left' : ''}`}>
+        {/* Avatar 舞台 */}
+        <section class="avatar-stage">
           <Avatar 
-            modelPath="/live2d/shizuku/shizuku.model.json"
+            modelPath={modelPath()}
             width={500}
             height={450}
             onReady={handleAvatarReady}
             onError={handleAvatarError}
           />
           
-          {/* 状态指示器 */}
-          {systemState().isSpeaking && (
-            <div class="speaking-indicator">
-              <span class="pulse"></span>
+          {/* 说话指示器 */}
+          <Show when={systemState().isSpeaking}>
+            <div class="speaking-badge">
+              <span class="speaking-badge__pulse"></span>
               说话中...
             </div>
-          )}
-        </div>
-
+          </Show>
+          
+          {/* 表情状态 */}
+          <div class="emotion-badge">
+            {systemState().currentEmotion === 'happy' ? '😊' :
+             systemState().currentEmotion === 'sad' ? '😢' :
+             systemState().currentEmotion === 'surprised' ? '😮' : '😐'}
+          </div>
+        </section>
+        
         {/* 聊天面板 */}
-        {showChat() && avatarReady() && (
-          <div class="chat-panel">
-            <div class="chat-messages">
-              <For each={chatMessages()}>
-                {(msg) => (
-                  <div class={`chat-message ${msg.role}`}>
-                    <span class="content">{msg.content}</span>
-                  </div>
-                )}
-              </For>
-              
-              {/* 正在输入提示 */}
-              {systemState().processingText && (
-                <div class="chat-message assistant typing">
-                  <span class="content">{systemState().processingText}</span>
-                  <span class="typing-dots">...</span>
-                </div>
-              )}
-            </div>
-            
-            <div class="chat-input">
-              <input
-                type="text"
-                value={inputText()}
-                onInput={(e) => setInputText(e.currentTarget.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="输入消息..."
-              />
-              <button onClick={sendMessage}>发送</button>
-            </div>
-          </div>
-        )}
+        <Show when={config().showChat && avatarReady()}>
+          <aside class="chat-aside">
+            <ChatPanel
+              messages={chatMessages()}
+              processingText={systemState().processingText}
+              isSpeaking={systemState().isSpeaking}
+              onSendMessage={handleSendMessage}
+              onClearHistory={handleClearHistory}
+            />
+          </aside>
+        </Show>
       </div>
-
+      
       {/* 控制面板 */}
-      {avatarReady() && (
-        <div class="control-panel">
-          <div class="control-group">
-            <h3>表情</h3>
-            <div class="button-row">
-              <button 
-                onClick={() => changeExpression('neutral')}
-                class={currentExpression() === 'neutral' ? 'active' : ''}
-              >
-                😐 普通
-              </button>
-              <button 
-                onClick={() => changeExpression('happy')}
-                class={currentExpression() === 'happy' ? 'active' : ''}
-              >
-                😊 开心
-              </button>
-              <button 
-                onClick={() => changeExpression('sad')}
-                class={currentExpression() === 'sad' ? 'active' : ''}
-              >
-                😢 难过
-              </button>
-              <button 
-                onClick={() => changeExpression('surprised')}
-                class={currentExpression() === 'surprised' ? 'active' : ''}
-              >
-                😮 惊讶
-              </button>
-            </div>
-          </div>
-
-          <div class="control-group">
-            <h3>动作</h3>
-            <div class="button-row">
-              <button onClick={() => playMotion('idle')}>🧘 Idle</button>
-              <button onClick={() => playMotion('tap_body')}>👋 摸身体</button>
-              <button onClick={() => playMotion('shake')}>🫨 摇晃</button>
-              <button onClick={() => playMotion('flick_head')}>👆 摸头</button>
-            </div>
-          </div>
-
-          <div class="control-group">
-            <h3>测试</h3>
-            <div class="button-row">
-              <button onClick={testLipSync}>🎤 口型测试</button>
-              <button onClick={testTTS}>🔊 TTS 测试</button>
-              <button onClick={() => setShowChat(!showChat())}>
-                💬 {showChat() ? '隐藏' : '显示'}聊天
-              </button>
-              <button onClick={() => setShowSettings(!showSettings())}>
-                ⚙️ 设置
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 设置面板 */}
-      {showSettings() && (
-        <div class="settings-panel">
-          <h3>⚙️ 设置</h3>
-          
-          <div class="setting-item">
-            <label>Gateway URL</label>
-            <input
-              type="text"
-              value={gatewayUrl()}
-              onInput={(e) => setGatewayUrl(e.currentTarget.value)}
-              placeholder="ws://localhost:3939/ws"
-            />
+      <Show when={avatarReady()}>
+        <section class="controls-panel">
+          <div class="controls-panel__header">
+            <span>控制面板</span>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setControlsExpanded(!controlsExpanded());
+                updateConfig({ controlsExpanded: !controlsExpanded() });
+              }}
+            >
+              {controlsExpanded() ? '收起 ▲' : '展开 ▼'}
+            </Button>
           </div>
           
-          <div class="setting-item">
-            <label>Fish Audio API Key</label>
-            <input
-              type="password"
-              value={fishApiKey()}
-              onInput={(e) => setFishApiKey(e.currentTarget.value)}
-              placeholder="输入 API Key"
-            />
-          </div>
-          
-          <div class="button-row">
-            {systemState().connectionStatus === 'connected' ? (
-              <button onClick={disconnectOpenClaw} class="btn-danger">
-                断开连接
-              </button>
-            ) : (
-              <button onClick={connectOpenClaw} class="btn-primary">
-                连接 OpenClaw
-              </button>
-            )}
-            <button onClick={() => setShowSettings(false)}>关闭</button>
-          </div>
-        </div>
-      )}
-
-      <div class="status-panel">
-        <div class={`status-indicator ${systemState().connectionStatus}`}>
-          <span class="dot"></span>
+          <Show when={controlsExpanded()}>
+            <div class="controls-panel__body">
+              {/* 表情控制 */}
+              <div class="control-group">
+                <h4>表情</h4>
+                <div class="control-buttons">
+                  <Button 
+                    active={systemState().currentEmotion === 'neutral'}
+                    onClick={() => changeExpression('neutral')}
+                  >
+                    😐 普通
+                  </Button>
+                  <Button 
+                    active={systemState().currentEmotion === 'happy'}
+                    onClick={() => changeExpression('happy')}
+                  >
+                    😊 开心
+                  </Button>
+                  <Button 
+                    active={systemState().currentEmotion === 'sad'}
+                    onClick={() => changeExpression('sad')}
+                  >
+                    😢 难过
+                  </Button>
+                  <Button 
+                    active={systemState().currentEmotion === 'surprised'}
+                    onClick={() => changeExpression('surprised')}
+                  >
+                    😮 惊讶
+                  </Button>
+                </div>
+              </div>
+              
+              {/* 动作控制 */}
+              <div class="control-group">
+                <h4>动作</h4>
+                <div class="control-buttons">
+                  <Button onClick={() => playMotion('idle')}>🧘 Idle</Button>
+                  <Button onClick={() => playMotion('tap_body')}>👋 摸身体</Button>
+                  <Button onClick={() => playMotion('shake')}>🫨 摇晃</Button>
+                  <Button onClick={() => playMotion('flick_head')}>👆 摸头</Button>
+                </div>
+              </div>
+              
+              {/* 测试功能 */}
+              <div class="control-group">
+                <h4>测试</h4>
+                <div class="control-buttons">
+                  <Button onClick={testLipSync}>🎤 口型测试</Button>
+                  <Button onClick={testTTS}>🔊 TTS 测试</Button>
+                  <Button onClick={() => updateConfig({ showChat: !config().showChat })}>
+                    💬 {config().showChat ? '隐藏' : '显示'}聊天
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Show>
+        </section>
+      </Show>
+      
+      {/* 状态栏 */}
+      <footer class="status-bar">
+        <div class={`connection-indicator connection-indicator--${systemState().connectionStatus}`}>
+          <span class="connection-indicator__dot"></span>
           <span>
-            {systemState().connectionStatus === 'connected' 
-              ? 'OpenClaw 已连接' 
-              : systemState().connectionStatus === 'connecting'
-              ? '连接中...'
-              : avatarReady() 
-              ? 'Avatar 就绪 (离线模式)' 
-              : '加载中...'}
+            {systemState().connectionStatus === 'connected' ? 'OpenClaw 已连接' :
+             systemState().connectionStatus === 'connecting' ? '连接中...' :
+             avatarReady() ? 'Avatar 就绪 (离线模式)' : '加载中...'}
           </span>
         </div>
-        <p class="status-message">{status()}</p>
-      </div>
-
-      <footer class="tech-stack">
-        <span>SolidJS</span>
-        <span>•</span>
-        <span>Tauri 2.0</span>
-        <span>•</span>
-        <span>Live2D</span>
-        <span>•</span>
-        <span>Fish Audio</span>
-        <span>•</span>
-        <span>OpenClaw</span>
+        
+        <span class="status-message">{statusMessage()}</span>
+        
+        <div class="tech-badges">
+          <span>SolidJS</span>
+          <span>•</span>
+          <span>Tauri 2.0</span>
+          <span>•</span>
+          <span>Live2D</span>
+        </div>
       </footer>
+      
+      {/* 设置对话框 */}
+      <SettingsDialog
+        open={showSettings()}
+        onOpenChange={setShowSettings}
+        connectionStatus={systemState().connectionStatus}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+        onModelChange={handleModelChange}
+      />
     </main>
   );
 }

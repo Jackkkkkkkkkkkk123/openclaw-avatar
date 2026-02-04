@@ -147,7 +147,7 @@ export class LipSyncDriver {
     }
 
     // 获取音量数据
-    this.analyser.getByteFrequencyData(this.dataArray);
+    this.analyser.getByteFrequencyData(this.dataArray as Uint8Array<ArrayBuffer>);
     
     // 计算平均音量 (重点关注人声频率范围 85-255 Hz)
     // 在 256 点 FFT，采样率 44100 Hz 下：
