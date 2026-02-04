@@ -12,7 +12,7 @@ import { avatarController, type Expression, type MotionGroup } from './lib/Avata
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
 import { lipSyncDriver } from './lib/LipSyncDriver';
 import { performanceMonitor } from './lib/PerformanceMonitor';
-import { config, updateConfig } from './stores/configStore';
+import { config, updateConfig, resetConfig } from './stores/configStore';
 import { initTheme, toggleTheme, getThemeIcon } from './stores/themeStore';
 import './theme.css';
 import './App.css';
@@ -221,8 +221,14 @@ function App() {
           <Button variant="ghost" size="sm" onClick={toggleTheme} title="切换主题">
             {getThemeIcon(config().theme)}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} title="设置">
             ⚙️
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            resetConfig();
+            window.location.reload();
+          }} title="重置配置">
+            🔄
           </Button>
         </div>
       </header>
