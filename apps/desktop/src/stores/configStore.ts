@@ -39,9 +39,9 @@ const DEFAULT_CONFIG: AppConfig = {
   chatPosition: 'right',
   controlsExpanded: true,
   showDevPanel: false,  // 默认关闭开发者面板
-  enableParticles: true,  // 默认开启粒子特效
-  enableBackground: true,  // 默认开启动态背景
-  enableLighting: true,  // 默认开启动态光照
+  enableParticles: false,  // 粒子特效（花架子，禁用）
+  enableBackground: false,  // 动态背景（花架子，禁用）
+  enableLighting: false,  // 动态光照（花架子，禁用）
 };
 
 const STORAGE_KEY = 'openclaw-avatar-config-v2'; // v2: 强制使用内置配置

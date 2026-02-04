@@ -130,7 +130,7 @@ export class AvatarSystem {
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
       enableEmotionDetection: config.enableEmotionDetection ?? true,
-      useStreamingTTS: config.useStreamingTTS ?? true,  // 默认启用流式 TTS
+      useStreamingTTS: config.useStreamingTTS ?? false,  // 流式 TTS 有 bug，默认禁用
     };
 
     this.useBridge = this.config.useBridge ?? true;
