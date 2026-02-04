@@ -1,295 +1,447 @@
-/* PerformancePanel Styles */
+/**
+ * PerformancePanel 样式
+ * 表演编排面板 - 选择模板、播放控制、录制
+ */
 
 .performance-panel {
-  background: var(--surface, #1a1a2e);
-  border: 1px solid var(--border, #333);
-  border-radius: 12px;
-  padding: 16px;
+  position: absolute;
+  left: 20px;
+  bottom: 100px;
   width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  background: var(--card-bg, rgba(30, 30, 40, 0.95));
+  border-radius: 16px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 100;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
+.performance-panel.compact {
+  width: 280px;
+}
+
+/* 标题栏 */
 .panel-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--header-bg, rgba(0, 0, 0, 0.2));
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
-.panel-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text, #fff);
-}
-
-.header-actions {
+.header-left {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.monitor-toggle {
-  padding: 4px 12px;
-  background: var(--surface-hover, #252540);
-  border: 1px solid var(--border, #333);
-  border-radius: 6px;
-  color: var(--text-secondary, #999);
+.header-icon {
+  font-size: 1.2rem;
+}
+
+.header-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.compact-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  transition: color 0.2s;
+}
+
+.compact-toggle:hover {
+  color: var(--primary-color, #39c5bb);
+}
+
+/* 分类标签 */
+.category-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.category-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--tab-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid transparent;
+  border-radius: 20px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   font-size: 0.8rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.monitor-toggle:hover {
-  background: var(--surface-active, #303050);
-  color: var(--text, #fff);
+.category-tab:hover {
+  background: var(--tab-hover, rgba(255, 255, 255, 0.1));
 }
 
-.monitor-toggle.active {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: #22c55e;
-  color: #22c55e;
+.category-tab.active {
+  background: var(--primary-color, #39c5bb);
+  color: white;
+  border-color: var(--primary-color, #39c5bb);
 }
 
-.close-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary, #999);
-  font-size: 1.2rem;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: var(--surface-hover, #252540);
-  color: var(--text, #fff);
-}
-
-/* 实时指标 */
-.realtime-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.metric-card {
-  background: var(--surface-hover, #252540);
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.metric-card.fps-card {
-  grid-column: span 2;
-  position: relative;
-  overflow: hidden;
-}
-
-.metric-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text, #fff);
-  font-family: 'SF Mono', monospace;
-}
-
-.metric-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary, #999);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* FPS 曲线图 */
-.fps-chart {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 30px;
-  opacity: 0.3;
-}
-
-.fps-chart svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* 性能报告 */
-.performance-report {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.performance-report h4 {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary, #999);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* 总体评级 */
-.overall-grade {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--surface-hover, #252540);
-  border-radius: 10px;
-}
-
-.grade-badge {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.grade-desc {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--text, #fff);
-}
-
-/* 分项评级 */
-.grade-items {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.grade-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: var(--surface-hover, #252540);
-  border-radius: 8px;
-}
-
-.grade-item span:first-child {
-  color: var(--text-secondary, #999);
-  font-size: 0.85rem;
-}
-
-.grade-item .grade {
-  font-size: 1.1rem;
-  font-weight: 700;
-  font-family: 'SF Mono', monospace;
-}
-
-/* 统计数据 */
-.stats-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.stats-grid .stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  background: var(--surface-hover, #252540);
-  border-radius: 8px;
-}
-
-.stats-grid .stat-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary, #999);
-}
-
-.stats-grid .stat-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text, #fff);
-  font-family: 'SF Mono', monospace;
-}
-
-/* 优化建议 */
-.suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.suggestions ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.suggestions li {
-  color: var(--text, #fff);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  margin-bottom: 6px;
-}
-
-/* 未监控状态 */
-.not-monitoring {
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text-secondary, #666);
+.cat-icon {
   font-size: 0.9rem;
 }
 
-/* 紧凑模式 */
-.perf-panel-compact {
+.cat-name {
+  text-transform: capitalize;
+}
+
+/* 脚本列表 */
+.scripts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.script-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  background: var(--surface, #1a1a2e);
-  border: 1px solid var(--border, #333);
-  border-radius: 8px;
-  font-family: 'SF Mono', monospace;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--card-inner, rgba(255, 255, 255, 0.03));
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.script-card:hover {
+  background: var(--card-hover, rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.script-card.selected {
+  background: var(--primary-alpha, rgba(57, 197, 187, 0.15));
+  border-color: var(--primary-color, #39c5bb);
+}
+
+.script-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.script-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.script-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.script-duration {
+  font-size: 0.75rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  margin-top: 2px;
+}
+
+.script-desc {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, rgba(255, 255, 255, 0.4));
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 播放控制 */
+.playback-controls {
+  padding: 12px;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: var(--controls-bg, rgba(0, 0, 0, 0.1));
+}
+
+.current-script {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.current-icon {
+  font-size: 1.2rem;
+}
+
+.current-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+}
+
+/* 进度条 */
+.progress-container {
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.progress-bar {
+  position: relative;
+  height: 6px;
+  background: var(--progress-bg, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color, #39c5bb), var(--primary-light, #5dd9cf));
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.progress-cursor {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--primary-color, #39c5bb);
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.progress-container:hover .progress-cursor {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 2px 10px rgba(57, 197, 187, 0.5);
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.time-separator {
+  opacity: 0.5;
+}
+
+/* 控制按钮 */
+.control-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--btn-bg, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #fff);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--btn-hover, rgba(255, 255, 255, 0.2));
+  transform: scale(1.05);
+}
+
+.control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.control-btn.play-pause {
+  width: 50px;
+  height: 50px;
+  font-size: 1.3rem;
+  background: var(--primary-color, #39c5bb);
+  box-shadow: 0 4px 12px rgba(57, 197, 187, 0.3);
+}
+
+.control-btn.play-pause:hover {
+  background: var(--primary-light, #5dd9cf);
+}
+
+.control-btn.play-pause.playing {
+  background: #ff6b6b;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.control-btn.loop.active,
+.control-btn.record.active {
+  background: var(--primary-color, #39c5bb);
+  color: white;
+}
+
+.control-btn.record.active {
+  background: #ff4444;
+  animation: pulse-record 1.5s infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 68, 68, 0); }
+}
+
+/* 速度控制 */
+.speed-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.speed-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  margin-right: 4px;
+}
+
+.speed-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.speed-btn:hover {
+  background: var(--btn-hover, rgba(255, 255, 255, 0.1));
+}
+
+.speed-btn.active {
+  background: var(--primary-color, #39c5bb);
+  border-color: var(--primary-color, #39c5bb);
+  color: white;
+}
+
+/* 状态指示 */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-idle, #888);
+  transition: all 0.3s;
+}
+
+.status-dot.idle {
+  background: #888;
+}
+
+.status-dot.playing {
+  background: #4caf50;
+  animation: pulse 1s infinite;
+}
+
+.status-dot.paused {
+  background: #ff9800;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.loop-count {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, rgba(255, 255, 255, 0.5));
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 空状态 */
+.empty-hint {
+  padding: 16px;
+  text-align: center;
   font-size: 0.85rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
 }
 
-.perf-panel-compact .fps {
-  font-weight: 600;
+/* 响应式 */
+@media (max-width: 600px) {
+  .performance-panel {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: 80px;
+  }
+  
+  .scripts-list {
+    max-height: 150px;
+  }
 }
 
-.perf-panel-compact .mem {
-  color: var(--text-secondary, #999);
-}
-
-/* Light theme */
-[data-theme="light"] .performance-panel {
-  background: #fff;
-  border-color: #ddd;
-}
-
-[data-theme="light"] .metric-card,
-[data-theme="light"] .overall-grade,
-[data-theme="light"] .grade-item,
-[data-theme="light"] .stats-grid .stat-item {
-  background: #f5f5f5;
-}
-
-[data-theme="light"] .perf-panel-compact {
-  background: #fff;
-  border-color: #ddd;
+/* 浅色主题适配 */
+:root[data-theme="light"] .performance-panel {
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --header-bg: rgba(0, 0, 0, 0.03);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --tab-bg: rgba(0, 0, 0, 0.05);
+  --tab-hover: rgba(0, 0, 0, 0.1);
+  --card-inner: rgba(0, 0, 0, 0.03);
+  --card-hover: rgba(0, 0, 0, 0.06);
+  --controls-bg: rgba(0, 0, 0, 0.02);
+  --progress-bg: rgba(0, 0, 0, 0.1);
+  --btn-bg: rgba(0, 0, 0, 0.08);
+  --btn-hover: rgba(0, 0, 0, 0.12);
+  --text-primary: #1a1a2e;
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-tertiary: rgba(0, 0, 0, 0.4);
 }

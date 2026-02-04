@@ -115,7 +115,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PROXY_PORT, '127.0.0.1', () => {
-  console.log(`[TTS Proxy] 运行在 http://127.0.0.1:${PROXY_PORT}`);
+server.listen(PROXY_PORT, '0.0.0.0', () => {
+  console.log(`[TTS Proxy] 运行在 http://0.0.0.0:${PROXY_PORT}`);
   console.log(`[TTS Proxy] 系统代理: ${SYSTEM_PROXY}`);
 });

@@ -110,8 +110,8 @@ export class TTSService {
       // 浏览器环境：使用本地 TTS 代理服务器 (端口 14201)
       console.log('[TTS] 使用本地代理服务器');
       try {
-        // 使用本地代理端点 (tts-proxy.mjs)
-        const proxyEndpoint = 'http://127.0.0.1:14201';
+        // 使用本地代理端点 (tts-proxy.mjs) - 用当前页面的 hostname
+        const proxyEndpoint = `http://${window.location.hostname}:14201`;
         const response = await fetch(proxyEndpoint, {
           method: 'POST',
           headers: {
