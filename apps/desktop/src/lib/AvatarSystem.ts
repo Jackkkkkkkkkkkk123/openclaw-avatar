@@ -814,32 +814,43 @@ export class AvatarSystem {
     this.isProcessingTTS = true;
     this.updateState({ isSpeaking: true });
 
-    while (this.ttsQueue.length > 0) {
-      const text = this.ttsQueue.shift()!;
-      
-      try {
-        console.log('[AvatarSystem] TTS 播放:', text);
+    try {
+      while (this.ttsQueue.length > 0) {
+        const text = this.ttsQueue.shift()!;
         
-        // 合成语音
-        const result = await this.ttsService.synthesize(text);
-        
-        // 播放并同步口型
-        await this.speakWithLipSync(text, result);
-      } catch (e) {
-        console.error('[AvatarSystem] TTS 错误:', e);
-        
-        // TTS 失败时使用模拟口型
-        if (this.config.enableLipSync) {
-          await this.lipSyncDriver.simulateLipSync(text, text.length * 150);
+        try {
+          console.log('[AvatarSystem] TTS 播放:', text);
+          
+          // 合成语音
+          const result = await this.ttsService.synthesize(text);
+          
+          // 播放并同步口型（带超时保护）
+          await Promise.race([
+            this.speakWithLipSync(text, result),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('TTS 播放超时')), 30000))
+          ]);
+        } catch (e) {
+          console.error('[AvatarSystem] TTS 错误:', e);
+          
+          // TTS 失败时使用模拟口型（短暂显示说话状态）
+          if (this.config.enableLipSync) {
+            try {
+              await this.lipSyncDriver.simulateLipSync(text, Math.min(text.length * 150, 3000));
+            } catch (lipSyncErr) {
+              console.warn('[AvatarSystem] 模拟口型失败:', lipSyncErr);
+            }
+          }
         }
       }
+    } finally {
+      // 无论如何都要重置状态
+      this.isProcessingTTS = false;
+      this.updateState({ isSpeaking: false });
+      this.lipSyncDriver.stop();
+      
+      // 恢复 neutral 表情
+      this.setEmotion('neutral');
     }
-
-    this.isProcessingTTS = false;
-    this.updateState({ isSpeaking: false });
-    
-    // 恢复 neutral 表情
-    this.setEmotion('neutral');
   }
 
   /**
