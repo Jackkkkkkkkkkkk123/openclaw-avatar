@@ -23,6 +23,7 @@ export interface AppConfig {
   showDevPanel: boolean;  // 开发者面板
   enableParticles: boolean;  // 情绪粒子特效
   enableBackground: boolean;  // 情绪驱动背景
+  enableLighting: boolean;  // 动态光照系统
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -40,6 +41,7 @@ const DEFAULT_CONFIG: AppConfig = {
   showDevPanel: false,  // 默认关闭开发者面板
   enableParticles: true,  // 默认开启粒子特效
   enableBackground: true,  // 默认开启动态背景
+  enableLighting: true,  // 默认开启动态光照
 };
 
 const STORAGE_KEY = 'openclaw-avatar-config-v2'; // v2: 强制使用内置配置

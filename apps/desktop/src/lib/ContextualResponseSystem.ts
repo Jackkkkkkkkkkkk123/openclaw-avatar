@@ -2,12 +2,16 @@
  * ContextualResponseSystem - 上下文感知响应系统
  * 
  * 根据对话上下文智能调整 Avatar 响应行为：
- * - 对话主题追踪
- * - 对话阶段检测（开场、讨论、结束）
+ * - 对话主题追踪 (通过真实 LLM)
+ * - 对话阶段检测
  * - 用户意图历史记录
  * - 情感脉络追踪
  * - 个性化响应建议
+ * 
+ * v2.0: 接入 OpenClaw LLM 实现真实 AI 分析
  */
+
+import { llmService, ContextAnalysisResult, IntentAnalysisResult } from './LLMService';
 
 export type ConversationPhase = 
   | 'greeting'       // 问候阶段
@@ -45,6 +49,7 @@ export interface ConversationTurn {
   intent?: UserIntent;
   emotion?: string;
   topic?: TopicCategory;
+  llmAnalysis?: IntentAnalysisResult; // LLM 分析结果
 }
 
 export interface ContextState {
@@ -56,6 +61,7 @@ export interface ContextState {
   userIntents: UserIntent[];  // 用户意图历史
   isEngaged: boolean;         // 用户是否投入
   responseStyle: ResponseStyle;
+  lastLLMAnalysis?: ContextAnalysisResult; // 最新 LLM 分析
 }
 
 export interface ResponseStyle {
@@ -72,6 +78,7 @@ export interface ResponseSuggestion {
   styleAdjustments: Partial<ResponseStyle>;
   openingPhrases?: string[];
   avoidPhrases?: string[];
+  llmReasoning?: string;     // LLM 分析理由
 }
 
 export interface ContextConfig {
@@ -84,10 +91,12 @@ export interface ContextConfig {
   };
   topicChangeThreshold: number;  // 话题改变检测阈值
   engagementDecayRate: number;   // 参与度衰减率
+  useLLM: boolean;               // 是否使用 LLM (true=真实AI, false=本地fallback)
+  llmAnalysisInterval: number;   // LLM 分析间隔 (每 N 轮调用一次)
 }
 
-// 关键词映射
-const TOPIC_KEYWORDS: Record<TopicCategory, string[]> = {
+// 本地关键词映射 (仅作为 LLM 不可用时的 fallback)
+const TOPIC_KEYWORDS_FALLBACK: Record<TopicCategory, string[]> = {
   casual: ['天气', '吃饭', '今天', '周末', '睡觉', '无聊', '好玩', '电影', '音乐', '游戏'],
   question: ['什么', '怎么', '为什么', '哪里', '谁', '多少', '如何', '能不能', '可以吗', '是否'],
   story: ['曾经', '以前', '那次', '记得', '发生', '故事', '经历', '那天', '有一次'],
@@ -97,7 +106,7 @@ const TOPIC_KEYWORDS: Record<TopicCategory, string[]> = {
   technical: ['代码', '程序', '算法', '技术', '系统', '开发', '调试', '错误', 'bug']
 };
 
-const INTENT_KEYWORDS: Record<UserIntent, string[]> = {
+const INTENT_KEYWORDS_FALLBACK: Record<UserIntent, string[]> = {
   seek_info: ['是什么', '怎么样', '告诉我', '介绍', '解释'],
   seek_help: ['帮帮我', '帮忙', '怎么办', '救命', '求助'],
   share_feeling: ['我觉得', '我感觉', '心情', '感受'],
@@ -120,6 +129,8 @@ export class ContextualResponseSystem {
   private turns: ConversationTurn[] = [];
   private state: ContextState;
   private callbacks: Set<ContextCallback> = new Set();
+  private turnsSinceLastLLM = 0;
+  private isAnalyzing = false;
 
   constructor(config?: Partial<ContextConfig>) {
     this.config = {
@@ -132,6 +143,8 @@ export class ContextualResponseSystem {
       },
       topicChangeThreshold: 0.6,
       engagementDecayRate: 0.1,
+      useLLM: true,           // 默认使用真实 LLM
+      llmAnalysisInterval: 2, // 每 2 轮分析一次
       ...config
     };
 
@@ -158,20 +171,21 @@ export class ContextualResponseSystem {
   }
 
   /**
-   * 处理新的对话轮次
+   * 处理新的对话轮次 (异步，会调用 LLM)
    */
-  processTurn(text: string, role: 'user' | 'assistant', emotion?: string): void {
-    const intent = role === 'user' ? this.detectIntent(text) : undefined;
-    const topic = this.detectTopic(text);
-
+  async processTurn(text: string, role: 'user' | 'assistant', emotion?: string): Promise<void> {
     const turn: ConversationTurn = {
       role,
       text,
       timestamp: Date.now(),
-      intent,
-      emotion,
-      topic
+      emotion
     };
+
+    // 本地快速分析 (用于 fallback 或初始值)
+    const localIntent = role === 'user' ? this.detectIntentLocal(text) : undefined;
+    const localTopic = this.detectTopicLocal(text);
+    turn.intent = localIntent;
+    turn.topic = localTopic;
 
     this.turns.push(turn);
     if (this.turns.length > this.config.maxTurns) {
@@ -180,9 +194,10 @@ export class ContextualResponseSystem {
 
     if (role === 'user') {
       this.state.turnCount++;
+      this.turnsSinceLastLLM++;
       
-      if (intent) {
-        this.state.userIntents.push(intent);
+      if (localIntent) {
+        this.state.userIntents.push(localIntent);
         if (this.state.userIntents.length > 10) {
           this.state.userIntents.shift();
         }
@@ -196,24 +211,95 @@ export class ContextualResponseSystem {
       }
     }
 
-    // 更新话题
-    if (topic !== this.state.currentTopic) {
-      this.state.currentTopic = topic;
+    // 更新话题 (本地)
+    if (localTopic !== this.state.currentTopic) {
+      this.state.currentTopic = localTopic;
       this.state.topicDuration = 1;
     } else {
       this.state.topicDuration++;
     }
 
-    // 更新阶段
-    this.updatePhase(text, role);
+    // 更新阶段 (本地)
+    this.updatePhaseLocal(text, role);
 
-    // 更新参与度
-    this.updateEngagement(text, role);
+    // 更新参与度 (本地)
+    this.updateEngagementLocal(text, role);
 
-    // 调整响应风格
-    this.adjustResponseStyle();
-
+    // 通知初步状态
     this.notifyCallbacks();
+
+    // 异步调用 LLM 分析 (如果启用且满足间隔条件)
+    if (this.config.useLLM && 
+        role === 'user' && 
+        this.turnsSinceLastLLM >= this.config.llmAnalysisInterval &&
+        llmService.isConnected() &&
+        !this.isAnalyzing) {
+      this.performLLMAnalysis(text, turn);
+    }
+  }
+
+  /**
+   * 执行 LLM 分析 (异步)
+   */
+  private async performLLMAnalysis(text: string, turn: ConversationTurn): Promise<void> {
+    this.isAnalyzing = true;
+    this.turnsSinceLastLLM = 0;
+
+    try {
+      // 并行调用意图和上下文分析
+      const [intentResult, contextResult] = await Promise.all([
+        llmService.analyzeIntent(text),
+        llmService.analyzeContext(
+          this.turns.map(t => ({ role: t.role, text: t.text })),
+          text
+        )
+      ]);
+
+      // 更新意图
+      if (intentResult) {
+        turn.llmAnalysis = intentResult;
+        turn.intent = intentResult.intent as UserIntent;
+        
+        // 更新意图历史
+        const lastIndex = this.state.userIntents.length - 1;
+        if (lastIndex >= 0) {
+          this.state.userIntents[lastIndex] = intentResult.intent as UserIntent;
+        }
+        
+        console.log('[ContextSystem] LLM 意图分析:', intentResult.intent, 
+          `(置信度: ${(intentResult.confidence * 100).toFixed(0)}%)`);
+      }
+
+      // 更新上下文
+      if (contextResult) {
+        this.state.lastLLMAnalysis = contextResult;
+        this.state.currentTopic = contextResult.topic as TopicCategory;
+        this.state.phase = contextResult.phase as ConversationPhase;
+        this.state.isEngaged = contextResult.userEngagement > 0.5;
+        
+        // 更新响应风格
+        if (contextResult.suggestedStyle) {
+          this.state.responseStyle = {
+            ...this.state.responseStyle,
+            ...contextResult.suggestedStyle
+          };
+        }
+
+        console.log('[ContextSystem] LLM 上下文分析:', {
+          topic: contextResult.topic,
+          phase: contextResult.phase,
+          engagement: contextResult.userEngagement.toFixed(2),
+          suggestedEmotion: contextResult.suggestedEmotion
+        });
+      }
+
+      // 通知更新后的状态
+      this.notifyCallbacks();
+    } catch (e) {
+      console.error('[ContextSystem] LLM 分析错误:', e);
+    } finally {
+      this.isAnalyzing = false;
+    }
   }
 
   /**
@@ -226,32 +312,53 @@ export class ContextualResponseSystem {
       styleAdjustments: {}
     };
 
+    // 如果有 LLM 分析结果，优先使用
+    if (this.state.lastLLMAnalysis) {
+      const llmAnalysis = this.state.lastLLMAnalysis;
+      
+      if (llmAnalysis.suggestedEmotion) {
+        suggestion.emotion = llmAnalysis.suggestedEmotion;
+      }
+      
+      if (llmAnalysis.suggestedStyle) {
+        suggestion.styleAdjustments = llmAnalysis.suggestedStyle;
+      }
+      
+      suggestion.llmReasoning = llmAnalysis.reasoning;
+    }
+
     // 根据阶段调整
     switch (this.state.phase) {
       case 'greeting':
-        suggestion.emotion = 'happy';
+        suggestion.emotion = suggestion.emotion || 'happy';
         suggestion.motionHint = 'greeting';
         suggestion.openingPhrases = ['你好呀！', '嗨~', '见到你真开心！'];
         break;
       case 'farewell':
-        suggestion.emotion = 'calm';
+        suggestion.emotion = suggestion.emotion || 'calm';
         suggestion.motionHint = 'wave';
         suggestion.openingPhrases = ['再见~', '下次再聊！', '期待下次见面！'];
         break;
       case 'deepening':
-        suggestion.styleAdjustments.verbosity = 0.7;
-        suggestion.styleAdjustments.empathy = 0.8;
+        suggestion.styleAdjustments.verbosity = Math.max(
+          suggestion.styleAdjustments.verbosity || 0, 
+          0.7
+        );
+        suggestion.styleAdjustments.empathy = Math.max(
+          suggestion.styleAdjustments.empathy || 0, 
+          0.8
+        );
         break;
     }
 
     // 根据用户意图调整
     const recentIntent = this.state.userIntents[this.state.userIntents.length - 1];
     if (recentIntent === 'share_feeling') {
-      suggestion.emotion = this.mirrorEmotion();
+      suggestion.emotion = suggestion.emotion || this.mirrorEmotion();
       suggestion.styleAdjustments.empathy = 0.9;
       suggestion.motionHint = 'nod';
     } else if (recentIntent === 'seek_help') {
-      suggestion.emotion = 'thinking';
+      suggestion.emotion = suggestion.emotion || 'thinking';
       suggestion.styleAdjustments.enthusiasm = 0.8;
       suggestion.motionHint = 'thinking';
     }
@@ -264,10 +371,34 @@ export class ContextualResponseSystem {
       );
     } else if (this.state.currentTopic === 'creative') {
       suggestion.styleAdjustments.enthusiasm = 0.9;
-      suggestion.emotion = 'excited';
+      suggestion.emotion = suggestion.emotion || 'excited';
     }
 
     return suggestion;
+  }
+
+  /**
+   * 强制触发 LLM 分析 (不等待间隔)
+   */
+  async forceLLMAnalysis(): Promise<ContextAnalysisResult | null> {
+    if (!this.config.useLLM || !llmService.isConnected()) {
+      return null;
+    }
+
+    const lastUserTurn = this.turns.filter(t => t.role === 'user').pop();
+    if (!lastUserTurn) return null;
+
+    const result = await llmService.analyzeContext(
+      this.turns.map(t => ({ role: t.role, text: t.text })),
+      lastUserTurn.text
+    );
+
+    if (result) {
+      this.state.lastLLMAnalysis = result;
+      this.notifyCallbacks();
+    }
+
+    return result;
   }
 
   /**
@@ -295,7 +426,6 @@ export class ContextualResponseSystem {
    * 检测是否应该主动发起话题
    */
   shouldInitiateTopic(): boolean {
-    // 如果最近几轮都是简短回复，可能需要主动带动
     const recentUserTurns = this.turns
       .filter(t => t.role === 'user')
       .slice(-3);
@@ -320,16 +450,33 @@ export class ContextualResponseSystem {
   reset(): void {
     this.turns = [];
     this.state = this.createInitialState();
+    this.turnsSinceLastLLM = 0;
     this.notifyCallbacks();
   }
 
-  private detectIntent(text: string): UserIntent {
+  /**
+   * 设置是否使用 LLM
+   */
+  setUseLLM(useLLM: boolean): void {
+    this.config.useLLM = useLLM;
+  }
+
+  /**
+   * 检查 LLM 是否可用
+   */
+  isLLMAvailable(): boolean {
+    return this.config.useLLM && llmService.isConnected();
+  }
+
+  // === 本地 Fallback 方法 ===
+
+  private detectIntentLocal(text: string): UserIntent {
     const lower = text.toLowerCase();
     
     let maxScore = 0;
     let detectedIntent: UserIntent = 'social_chat';
     
-    for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS_FALLBACK)) {
       let score = 0;
       for (const keyword of keywords) {
         if (lower.includes(keyword)) {
@@ -345,13 +492,13 @@ export class ContextualResponseSystem {
     return detectedIntent;
   }
 
-  private detectTopic(text: string): TopicCategory {
+  private detectTopicLocal(text: string): TopicCategory {
     const lower = text.toLowerCase();
     
     let maxScore = 0;
     let detectedTopic: TopicCategory = 'casual';
     
-    for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS_FALLBACK)) {
       let score = 0;
       for (const keyword of keywords) {
         if (lower.includes(keyword)) {
@@ -367,24 +514,21 @@ export class ContextualResponseSystem {
     return detectedTopic;
   }
 
-  private updatePhase(text: string, role: 'user' | 'assistant'): void {
+  private updatePhaseLocal(text: string, role: 'user' | 'assistant'): void {
     const lower = text.toLowerCase();
     const tc = this.state.turnCount;
     const thresholds = this.config.phaseThresholds;
 
-    // 检测问候
     if (tc <= 2 && GREETING_PATTERNS.some(p => lower.includes(p))) {
       this.state.phase = 'greeting';
       return;
     }
 
-    // 检测告别
     if (FAREWELL_PATTERNS.some(p => lower.includes(p))) {
       this.state.phase = 'farewell';
       return;
     }
 
-    // 基于轮次的阶段推进
     if (tc < thresholds.warmingTurns) {
       this.state.phase = 'warming';
     } else if (tc < thresholds.mainTurns) {
@@ -392,7 +536,6 @@ export class ContextualResponseSystem {
     } else if (tc < thresholds.deepeningTurns) {
       this.state.phase = 'deepening';
     } else {
-      // 检测是否在收尾
       const recentIntents = this.state.userIntents.slice(-3);
       const hasConfirm = recentIntents.includes('confirm');
       const hasReject = recentIntents.includes('reject');
@@ -405,10 +548,9 @@ export class ContextualResponseSystem {
     }
   }
 
-  private updateEngagement(text: string, role: 'user' | 'assistant'): void {
+  private updateEngagementLocal(text: string, role: 'user' | 'assistant'): void {
     if (role !== 'user') return;
 
-    // 基于文本长度和内容评估参与度
     const length = text.length;
     const hasQuestion = text.includes('?') || text.includes('？');
     const hasExclaim = text.includes('!') || text.includes('！');
@@ -421,59 +563,26 @@ export class ContextualResponseSystem {
     if (hasQuestion) engagementDelta += 0.1;
     if (hasExclaim) engagementDelta += 0.05;
     
-    // 衰减
     engagementDelta -= this.config.engagementDecayRate;
     
     this.state.isEngaged = this.state.isEngaged && 
       (this.state.turnCount < 3 || engagementDelta > -0.15);
   }
 
-  private adjustResponseStyle(): void {
-    const style = this.state.responseStyle;
-    
-    // 根据阶段调整
-    switch (this.state.phase) {
-      case 'greeting':
-        style.enthusiasm = Math.max(style.enthusiasm, 0.7);
-        style.formality = Math.min(style.formality, 0.4);
-        break;
-      case 'deepening':
-        style.verbosity = Math.max(style.verbosity, 0.6);
-        style.empathy = Math.max(style.empathy, 0.6);
-        break;
-      case 'farewell':
-        style.enthusiasm = 0.5;
-        style.warmth = 0.8;
-        break;
-    }
-
-    // 根据话题调整
-    if (this.state.currentTopic === 'emotion') {
-      style.empathy = Math.max(style.empathy, 0.8);
-      style.humor = Math.min(style.humor, 0.2);
-    } else if (this.state.currentTopic === 'technical') {
-      style.formality = Math.max(style.formality, 0.6);
-      style.verbosity = Math.max(style.verbosity, 0.7);
-    }
-
-    // 如果用户不太投入，增加热情
-    if (!this.state.isEngaged) {
-      style.enthusiasm = Math.max(style.enthusiasm, 0.8);
-    }
-  }
-
   private suggestEmotion(): string {
-    // 基于最近情感轨迹
+    // 优先使用 LLM 建议
+    if (this.state.lastLLMAnalysis?.suggestedEmotion) {
+      return this.state.lastLLMAnalysis.suggestedEmotion;
+    }
+
     const recent = this.state.emotionTrajectory.slice(-3);
     if (recent.length === 0) return 'neutral';
     
-    // 检测情感趋势
     const emotionCounts: Record<string, number> = {};
     for (const emotion of recent) {
       emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
     }
     
-    // 返回最频繁的情感，或者根据上下文适当调整
     let maxEmotion = 'neutral';
     let maxCount = 0;
     for (const [emotion, count] of Object.entries(emotionCounts)) {
@@ -493,10 +602,9 @@ export class ContextualResponseSystem {
     
     if (!lastUserTurn?.emotion) return 'neutral';
     
-    // 镜像情感，但稍微缓和
     const emotion = lastUserTurn.emotion;
-    if (emotion === 'sad') return 'calm';  // 安慰
-    if (emotion === 'angry') return 'calm'; // 平复
+    if (emotion === 'sad') return 'calm';
+    if (emotion === 'angry') return 'calm';
     return emotion;
   }
 
@@ -532,10 +640,10 @@ export class ContextualResponseSystem {
     topicChanges: number;
     dominantTopic: TopicCategory;
     dominantIntent: UserIntent;
+    llmAnalysisCount: number;
   } {
     const userTurns = this.turns.filter(t => t.role === 'user');
     
-    // 计算话题变化次数
     let topicChanges = 0;
     let lastTopic: TopicCategory | null = null;
     const topicCounts: Partial<Record<TopicCategory, number>> = {};
@@ -549,7 +657,6 @@ export class ContextualResponseSystem {
       }
     }
     
-    // 找出主要话题
     let dominantTopic: TopicCategory = 'casual';
     let maxTopicCount = 0;
     for (const [topic, count] of Object.entries(topicCounts)) {
@@ -559,7 +666,6 @@ export class ContextualResponseSystem {
       }
     }
     
-    // 找出主要意图
     const intentCounts: Partial<Record<UserIntent, number>> = {};
     for (const intent of this.state.userIntents) {
       intentCounts[intent] = (intentCounts[intent] || 0) + 1;
@@ -573,6 +679,9 @@ export class ContextualResponseSystem {
         dominantIntent = intent as UserIntent;
       }
     }
+
+    // 统计 LLM 分析次数
+    const llmAnalysisCount = this.turns.filter(t => t.llmAnalysis).length;
     
     return {
       totalTurns: this.turns.length,
@@ -582,7 +691,8 @@ export class ContextualResponseSystem {
         : 0,
       topicChanges,
       dominantTopic,
-      dominantIntent
+      dominantIntent,
+      llmAnalysisCount
     };
   }
 }

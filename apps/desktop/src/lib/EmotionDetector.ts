@@ -3,14 +3,53 @@
  * 
  * 根据 AI 回复的文本内容，推断应该展示的表情
  * 
- * v2.0 - SOTA 优化版
+ * v3.0 - LLM 集成版
  * - 支持24种表情类型
- * - 扩展关键词库 (300+ 关键词)
+ * - 优先使用 OpenClaw LLM 真实分析
+ * - 本地关键词作为 fallback
  * - 上下文感知检测
  * - 情绪强度分析
  */
 
 import type { Expression } from './AvatarController';
+import { llmService, EmotionAnalysisResult } from './LLMService';
+
+// ============ 配置 ============
+
+interface EmotionDetectorConfig {
+  useLLM: boolean;              // 是否使用 LLM
+  llmTimeout: number;           // LLM 超时 (ms)
+  cacheResults: boolean;        // 是否缓存结果
+  cacheTTL: number;             // 缓存过期时间 (ms)
+}
+
+const defaultConfig: EmotionDetectorConfig = {
+  useLLM: true,
+  llmTimeout: 5000,
+  cacheResults: true,
+  cacheTTL: 60000,
+};
+
+let config: EmotionDetectorConfig = { ...defaultConfig };
+
+// 缓存
+const emotionCache: Map<string, { result: EmotionResult; timestamp: number }> = new Map();
+
+/**
+ * 配置 EmotionDetector
+ */
+export function configureEmotionDetector(options: Partial<EmotionDetectorConfig>): void {
+  config = { ...config, ...options };
+}
+
+/**
+ * 检查 LLM 是否可用
+ */
+export function isLLMAvailable(): boolean {
+  return config.useLLM && llmService.isConnected();
+}
+
+// ============ 情绪关键词 (Fallback) ============
 
 // 情绪关键词映射 - 扩展到24种情绪，300+关键词
 const EMOTION_KEYWORDS: Record<Expression, string[]> = {
@@ -304,35 +343,35 @@ const EMOTION_WEIGHTS: Record<Expression, number> = {
   // 基础情绪
   happy: 1.0,
   sad: 1.2,
-  surprised: 1.5,      // 惊讶容易触发
+  surprised: 1.5,
   angry: 1.3,
   fear: 1.2,
   disgusted: 1.1,
   // 积极情绪
   excited: 1.3,
   proud: 1.1,
-  loving: 1.4,         // 爱意权重较高
+  loving: 1.4,
   grateful: 1.1,
   hopeful: 1.0,
   amused: 1.2,
   relieved: 1.0,
   // 消极情绪
   anxious: 1.1,
-  embarrassed: 1.3,    // 害羞/尴尬容易触发
+  embarrassed: 1.3,
   confused: 1.2,
   bored: 0.9,
   disappointed: 1.1,
   lonely: 1.0,
   // 复杂情绪
-  thinking: 0.8,       // 思考权重较低，避免误触发
+  thinking: 0.8,
   curious: 1.1,
   determined: 1.2,
-  playful: 1.3,        // 俏皮容易触发
+  playful: 1.3,
   // 中性
   neutral: 0.5,
 };
 
-// 情绪分类 - 用于回退映射
+// 情绪分类
 const EMOTION_CATEGORIES: Record<string, Expression[]> = {
   positive: ['happy', 'excited', 'proud', 'loving', 'grateful', 'hopeful', 'amused', 'relieved', 'playful'],
   negative: ['sad', 'angry', 'fear', 'disgusted', 'anxious', 'embarrassed', 'disappointed', 'lonely'],
@@ -340,18 +379,174 @@ const EMOTION_CATEGORIES: Record<string, Expression[]> = {
   intense: ['surprised', 'excited', 'angry', 'fear'],
 };
 
+// ============ 类型定义 ============
+
 export interface EmotionResult {
   emotion: Expression;
   confidence: number;
   keywords: string[];
   intensity: 'low' | 'medium' | 'high';
   category: 'positive' | 'negative' | 'neutral' | 'intense';
+  source: 'llm' | 'local' | 'cache';  // 结果来源
+  llmReasoning?: string;              // LLM 分析理由
+}
+
+// ============ 主要函数 ============
+
+/**
+ * 检测文本中的情绪 (异步，优先使用 LLM)
+ */
+export async function detectEmotionAsync(text: string): Promise<EmotionResult> {
+  // 检查缓存
+  if (config.cacheResults) {
+    const cached = emotionCache.get(text);
+    if (cached && Date.now() - cached.timestamp < config.cacheTTL) {
+      return { ...cached.result, source: 'cache' };
+    }
+  }
+
+  // 尝试 LLM 分析
+  if (isLLMAvailable()) {
+    try {
+      const llmResult = await Promise.race([
+        llmService.analyzeEmotion(text),
+        new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), config.llmTimeout)
+        )
+      ]);
+
+      if (llmResult) {
+        const result = convertLLMResult(llmResult, text);
+        
+        // 缓存结果
+        if (config.cacheResults) {
+          emotionCache.set(text, { result, timestamp: Date.now() });
+        }
+        
+        console.log('[EmotionDetector] LLM 分析:', result.emotion, 
+          `(置信度: ${(result.confidence * 100).toFixed(0)}%)`);
+        
+        return result;
+      }
+    } catch (e) {
+      console.warn('[EmotionDetector] LLM 分析失败，使用本地 fallback:', e);
+    }
+  }
+
+  // Fallback 到本地分析
+  const result = detectEmotionLocal(text);
+  result.source = 'local';
+  
+  // 缓存结果
+  if (config.cacheResults) {
+    emotionCache.set(text, { result, timestamp: Date.now() });
+  }
+  
+  return result;
 }
 
 /**
- * 检测文本中的情绪
+ * 检测文本中的情绪 (同步，仅本地分析)
  */
 export function detectEmotion(text: string): EmotionResult {
+  // 检查缓存
+  if (config.cacheResults) {
+    const cached = emotionCache.get(text);
+    if (cached && Date.now() - cached.timestamp < config.cacheTTL) {
+      return { ...cached.result, source: 'cache' };
+    }
+  }
+
+  const result = detectEmotionLocal(text);
+  
+  // 缓存结果
+  if (config.cacheResults) {
+    emotionCache.set(text, { result, timestamp: Date.now() });
+  }
+  
+  return result;
+}
+
+/**
+ * 转换 LLM 结果到 EmotionResult
+ */
+function convertLLMResult(llmResult: EmotionAnalysisResult, originalText: string): EmotionResult {
+  const emotion = normalizeEmotion(llmResult.emotion);
+  
+  let category: EmotionResult['category'] = 'neutral';
+  for (const [cat, emotions] of Object.entries(EMOTION_CATEGORIES)) {
+    if (emotions.includes(emotion)) {
+      category = cat as EmotionResult['category'];
+      break;
+    }
+  }
+  
+  let intensity: 'low' | 'medium' | 'high' = 'medium';
+  if (llmResult.confidence < 0.4) intensity = 'low';
+  else if (llmResult.confidence > 0.7) intensity = 'high';
+  
+  return {
+    emotion,
+    confidence: llmResult.confidence,
+    keywords: [],  // LLM 不返回关键词
+    intensity,
+    category,
+    source: 'llm',
+    llmReasoning: llmResult.reasoning
+  };
+}
+
+/**
+ * 归一化情绪名称
+ */
+function normalizeEmotion(emotion: string): Expression {
+  const lower = emotion.toLowerCase();
+  const allEmotions = Object.keys(EMOTION_KEYWORDS) as Expression[];
+  
+  // 直接匹配
+  if (allEmotions.includes(lower as Expression)) {
+    return lower as Expression;
+  }
+  
+  // 映射常见变体
+  const mappings: Record<string, Expression> = {
+    'joy': 'happy',
+    'happiness': 'happy',
+    'sadness': 'sad',
+    'anger': 'angry',
+    'surprise': 'surprised',
+    'fearful': 'fear',
+    'disgusted': 'disgusted',
+    'excitement': 'excited',
+    'calmness': 'neutral',
+    'confusion': 'confused',
+    'shyness': 'embarrassed',
+    'pride': 'proud',
+    'gratitude': 'grateful',
+    'hope': 'hopeful',
+    'love': 'loving',
+    'amusement': 'amused',
+    'anxiety': 'anxious',
+    'boredom': 'bored',
+    'disappointment': 'disappointed',
+    'loneliness': 'lonely',
+    'curiosity': 'curious',
+    'determination': 'determined',
+    'playfulness': 'playful',
+    'relief': 'relieved',
+  };
+  
+  if (mappings[lower]) {
+    return mappings[lower];
+  }
+  
+  return 'neutral';
+}
+
+/**
+ * 本地情绪检测 (关键词匹配)
+ */
+function detectEmotionLocal(text: string): EmotionResult {
   const lowerText = text.toLowerCase();
   const scores: Record<Expression, { score: number; keywords: string[] }> = {} as any;
   
@@ -365,7 +560,6 @@ export function detectEmotion(text: string): EmotionResult {
   for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS)) {
     for (const keyword of keywords) {
       const lowerKeyword = keyword.toLowerCase();
-      // 计算关键词出现次数
       let count = 0;
       let pos = 0;
       while ((pos = lowerText.indexOf(lowerKeyword, pos)) !== -1) {
@@ -383,18 +577,16 @@ export function detectEmotion(text: string): EmotionResult {
     }
   }
 
-  // 上下文增强：检测感叹号和问号数量
+  // 上下文增强
   const exclamationCount = (text.match(/[!！]{2,}/g) || []).length;
   const questionCount = (text.match(/[?？]{2,}/g) || []).length;
   
   if (exclamationCount > 0) {
-    // 多个感叹号增强 excited/surprised
     scores.excited.score += exclamationCount * 0.5;
     scores.surprised.score += exclamationCount * 0.3;
   }
   
   if (questionCount > 0) {
-    // 多个问号增强 confused/curious
     scores.confused.score += questionCount * 0.5;
     scores.curious.score += questionCount * 0.3;
   }
@@ -410,7 +602,7 @@ export function detectEmotion(text: string): EmotionResult {
     }
   }
 
-  // 计算置信度 (0-1)
+  // 计算置信度
   const totalScore = Object.values(scores).reduce((sum, d) => sum + d.score, 0);
   const confidence = totalScore > 0 ? maxScore / totalScore : 0;
 
@@ -436,6 +628,7 @@ export function detectEmotion(text: string): EmotionResult {
       keywords: [],
       intensity: 'low',
       category: 'neutral',
+      source: 'local'
     };
   }
 
@@ -445,6 +638,7 @@ export function detectEmotion(text: string): EmotionResult {
     keywords: scores[maxEmotion].keywords,
     intensity,
     category,
+    source: 'local'
   };
 }
 
@@ -481,10 +675,8 @@ export function detectMultipleEmotions(text: string, topN = 3): EmotionResult[] 
     }
   }
 
-  // 按分数排序
   scores.sort((a, b) => b.score - a.score);
 
-  // 转换为结果
   const totalScore = scores.reduce((sum, s) => sum + s.score, 0);
   
   return scores.slice(0, topN).map(s => {
@@ -506,18 +698,17 @@ export function detectMultipleEmotions(text: string, topN = 3): EmotionResult[] 
       keywords: s.keywords,
       intensity,
       category,
+      source: 'local' as const
     };
   });
 }
 
 /**
  * 分析一段流式文本，返回情绪变化序列
- * 用于长文本的分段情绪检测
  */
 export function analyzeEmotionStream(text: string, chunkSize = 50): EmotionResult[] {
   const results: EmotionResult[] = [];
   
-  // 按句子或固定长度分割
   const sentences = text.split(/[。！？\n.!?]/g).filter(s => s.trim());
   
   for (const sentence of sentences) {
@@ -526,7 +717,6 @@ export function analyzeEmotionStream(text: string, chunkSize = 50): EmotionResul
     }
   }
   
-  // 如果句子太少，按字符分割
   if (results.length === 0 && text.length > 0) {
     for (let i = 0; i < text.length; i += chunkSize) {
       const chunk = text.slice(i, i + chunkSize);
@@ -543,15 +733,14 @@ export function analyzeEmotionStream(text: string, chunkSize = 50): EmotionResul
 export function getEmotionDuration(result: EmotionResult): number {
   const baseDuration = 3000;
   
-  // 根据情绪类型调整
   const multiplier: Partial<Record<Expression, number>> = {
     happy: 1.2,
     sad: 1.5,
-    surprised: 0.8,     // 惊讶持续较短
+    surprised: 0.8,
     angry: 1.3,
     fear: 1.0,
     disgusted: 1.0,
-    excited: 0.9,       // 兴奋持续较短
+    excited: 0.9,
     proud: 1.2,
     loving: 1.5,
     grateful: 1.2,
@@ -573,7 +762,6 @@ export function getEmotionDuration(result: EmotionResult): number {
   
   const emotionMultiplier = multiplier[result.emotion] ?? 1.0;
   
-  // 根据强度调整
   const intensityMultiplier = {
     low: 0.7,
     medium: 1.0,
@@ -584,33 +772,31 @@ export function getEmotionDuration(result: EmotionResult): number {
 }
 
 /**
- * 获取情绪的衰减目标（某些情绪衰减到特定状态而非neutral）
+ * 获取情绪的衰减目标
  */
 export function getDecayTarget(emotion: Expression): Expression {
   const decayMap: Partial<Record<Expression, Expression>> = {
-    excited: 'happy',       // 兴奋衰减到开心
-    angry: 'disappointed',  // 生气衰减到失望
-    fear: 'anxious',        // 恐惧衰减到焦虑
-    surprised: 'curious',   // 惊讶衰减到好奇
-    loving: 'happy',        // 爱意衰减到开心
-    embarrassed: 'neutral', // 害羞衰减到中性
+    excited: 'happy',
+    angry: 'disappointed',
+    fear: 'anxious',
+    surprised: 'curious',
+    loving: 'happy',
+    embarrassed: 'neutral',
   };
   
   return decayMap[emotion] ?? 'neutral';
 }
 
 /**
- * 判断两个情绪是否兼容（可以混合）
+ * 判断两个情绪是否兼容
  */
 export function areEmotionsCompatible(e1: Expression, e2: Expression): boolean {
-  // 同类情绪可以混合
   for (const emotions of Object.values(EMOTION_CATEGORIES)) {
     if (emotions.includes(e1) && emotions.includes(e2)) {
       return true;
     }
   }
   
-  // 特殊兼容组合
   const compatiblePairs: [Expression, Expression][] = [
     ['happy', 'surprised'],
     ['happy', 'embarrassed'],
@@ -641,4 +827,11 @@ export function getEmotionStats(): Record<Expression, number> {
     stats[emotion as Expression] = keywords.length;
   }
   return stats;
+}
+
+/**
+ * 清除缓存
+ */
+export function clearEmotionCache(): void {
+  emotionCache.clear();
 }

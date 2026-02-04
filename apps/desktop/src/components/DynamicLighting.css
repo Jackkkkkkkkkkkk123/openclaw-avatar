@@ -1,0 +1,367 @@
+/**
+ * DynamicLighting.css - 动态光照样式
+ * 
+ * SOTA Round 41 - 真实的动态光照效果
+ * 
+ * 层级结构:
+ * 1. lighting-ambient - 环境光基础层
+ * 2. lighting-sources - 多光源层
+ * 3. lighting-shadows - 阴影层
+ * 4. lighting-bloom - 辉光/Bloom 层
+ * 5. lighting-volumetric - 体积光/God Ray 层
+ */
+
+.dynamic-lighting {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+  mix-blend-mode: normal;
+}
+
+/* ============= 环境光层 ============= */
+.lighting-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    var(--ambient-color, rgba(255, 255, 255, 0.1)) 0%,
+    transparent 70%
+  );
+  opacity: var(--ambient-intensity, 0.3);
+  transition: opacity 0.5s ease, background 0.5s ease;
+}
+
+/* ============= 光源层 ============= */
+.lighting-sources {
+  position: absolute;
+  inset: 0;
+}
+
+.light-source {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  left: var(--light-x, 50%);
+  top: var(--light-y, 50%);
+  width: var(--light-size, 200px);
+  height: var(--light-size, 200px);
+  background: radial-gradient(
+    circle at center,
+    var(--light-color, #ffffff) 0%,
+    transparent 70%
+  );
+  opacity: calc(var(--light-intensity, 0.5) * var(--light-falloff, 1));
+  mix-blend-mode: screen;
+  filter: blur(var(--light-blur, 30px));
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  animation: var(--light-animation, none);
+}
+
+/* 光源类型特化 */
+.light-ambient {
+  width: 150%;
+  height: 150%;
+  left: 50%;
+  top: 50%;
+  filter: blur(100px);
+  mix-blend-mode: soft-light;
+}
+
+.light-key {
+  --light-blur: 40px;
+  mix-blend-mode: screen;
+}
+
+.light-fill {
+  --light-blur: 60px;
+  opacity: calc(var(--light-intensity, 0.3) * 0.6);
+  mix-blend-mode: soft-light;
+}
+
+.light-rim {
+  --light-blur: 20px;
+  mix-blend-mode: screen;
+  opacity: calc(var(--light-intensity, 0.7) * 0.8);
+}
+
+.light-accent {
+  --light-blur: 25px;
+  mix-blend-mode: color-dodge;
+}
+
+.light-volumetric {
+  width: 50%;
+  height: 200%;
+  border-radius: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--light-color, rgba(255, 255, 255, 0.8)) 0%,
+    transparent 100%
+  );
+  filter: blur(15px);
+  mix-blend-mode: soft-light;
+  opacity: calc(var(--light-intensity, 0.3) * 0.5);
+  transform: translate(-50%, -20%) rotate(var(--volumetric-angle, 0deg));
+}
+
+/* ============= 光源动画 ============= */
+@keyframes light-pulse {
+  0%, 100% { 
+    opacity: calc(var(--light-intensity, 0.5) * var(--light-falloff, 1)); 
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% { 
+    opacity: calc(var(--light-intensity, 0.5) * var(--light-falloff, 1) * 1.2); 
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+@keyframes light-flicker {
+  0%, 100% { opacity: calc(var(--light-intensity, 0.5) * 1); }
+  10% { opacity: calc(var(--light-intensity, 0.5) * 0.8); }
+  20% { opacity: calc(var(--light-intensity, 0.5) * 1.1); }
+  30% { opacity: calc(var(--light-intensity, 0.5) * 0.9); }
+  50% { opacity: calc(var(--light-intensity, 0.5) * 0.7); }
+  70% { opacity: calc(var(--light-intensity, 0.5) * 1.05); }
+  90% { opacity: calc(var(--light-intensity, 0.5) * 0.95); }
+}
+
+@keyframes light-sway {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  25% { transform: translate(-50%, -50%) translateX(10px); }
+  75% { transform: translate(-50%, -50%) translateX(-10px); }
+}
+
+@keyframes light-rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.light-source[data-animation="pulse"] {
+  animation: light-pulse 2s ease-in-out infinite;
+}
+
+.light-source[data-animation="flicker"] {
+  animation: light-flicker 0.5s ease-in-out infinite;
+}
+
+.light-source[data-animation="sway"] {
+  animation: light-sway 4s ease-in-out infinite;
+}
+
+.light-source[data-animation="rotate"] {
+  animation: light-rotate 8s linear infinite;
+}
+
+/* ============= 阴影层 ============= */
+.lighting-shadows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shadow-layer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at var(--shadow-x, 50%) var(--shadow-y, 100%),
+    var(--shadow-color, rgba(0, 0, 0, 0.3)) 0%,
+    transparent 50%
+  );
+  opacity: var(--shadow-opacity, 0.5);
+  filter: blur(var(--shadow-blur, 20px));
+  transition: all 0.5s ease;
+}
+
+/* ============= 辉光/Bloom 层 ============= */
+.lighting-bloom {
+  position: absolute;
+  inset: -50px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    var(--bloom-color, rgba(255, 255, 255, 0.3)) 0%,
+    transparent 60%
+  );
+  opacity: var(--bloom-intensity, 0.3);
+  filter: blur(var(--bloom-radius, 40px));
+  mix-blend-mode: screen;
+  animation: bloom-pulse 3s ease-in-out infinite;
+}
+
+@keyframes bloom-pulse {
+  0%, 100% { opacity: var(--bloom-intensity, 0.3); }
+  50% { opacity: calc(var(--bloom-intensity, 0.3) * 1.15); }
+}
+
+/* ============= 体积光/God Ray 层 ============= */
+.lighting-volumetric {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.god-ray {
+  position: absolute;
+  width: 100%;
+  height: 200%;
+  top: -50%;
+  background: linear-gradient(
+    to bottom,
+    var(--ray-color, rgba(255, 255, 255, 0.2)) 0%,
+    transparent 50%
+  );
+  opacity: var(--ray-opacity, 0.15);
+  filter: blur(5px);
+  mix-blend-mode: soft-light;
+  transform: rotate(var(--ray-angle, 0deg));
+  transform-origin: center top;
+  animation: ray-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes ray-shimmer {
+  0%, 100% { opacity: var(--ray-opacity, 0.15); }
+  50% { opacity: calc(var(--ray-opacity, 0.15) * 0.7); }
+}
+
+/* ============= 情绪特定光照 ============= */
+.dynamic-lighting[data-emotion="happy"] {
+  --ambient-color: rgba(255, 220, 150, 0.15);
+  --bloom-color: rgba(255, 200, 100, 0.2);
+}
+
+.dynamic-lighting[data-emotion="sad"] {
+  --ambient-color: rgba(100, 120, 180, 0.1);
+  --bloom-color: rgba(80, 100, 160, 0.15);
+}
+
+.dynamic-lighting[data-emotion="surprised"] {
+  --ambient-color: rgba(200, 150, 255, 0.12);
+  --bloom-color: rgba(180, 130, 255, 0.2);
+}
+
+.dynamic-lighting[data-emotion="angry"] {
+  --ambient-color: rgba(255, 100, 80, 0.1);
+  --bloom-color: rgba(255, 80, 60, 0.15);
+}
+
+.dynamic-lighting[data-emotion="fear"] {
+  --ambient-color: rgba(80, 60, 100, 0.08);
+  --bloom-color: rgba(60, 40, 80, 0.1);
+}
+
+.dynamic-lighting[data-emotion="loving"] {
+  --ambient-color: rgba(255, 150, 180, 0.12);
+  --bloom-color: rgba(255, 120, 160, 0.18);
+}
+
+.dynamic-lighting[data-emotion="excited"] {
+  --ambient-color: rgba(255, 180, 100, 0.15);
+  --bloom-color: rgba(255, 200, 80, 0.25);
+}
+
+.dynamic-lighting[data-emotion="calm"] {
+  --ambient-color: rgba(150, 200, 180, 0.1);
+  --bloom-color: rgba(130, 180, 160, 0.12);
+}
+
+/* ============= 时间氛围光照 ============= */
+.dynamic-lighting[data-time="dawn"] {
+  --ambient-color: rgba(255, 180, 150, 0.15);
+}
+
+.dynamic-lighting[data-time="morning"] {
+  --ambient-color: rgba(255, 240, 200, 0.12);
+}
+
+.dynamic-lighting[data-time="afternoon"] {
+  --ambient-color: rgba(255, 250, 240, 0.1);
+}
+
+.dynamic-lighting[data-time="evening"] {
+  --ambient-color: rgba(255, 180, 120, 0.15);
+}
+
+.dynamic-lighting[data-time="night"] {
+  --ambient-color: rgba(100, 120, 180, 0.08);
+}
+
+.dynamic-lighting[data-time="midnight"] {
+  --ambient-color: rgba(60, 70, 120, 0.05);
+}
+
+/* ============= 天气效果光照 ============= */
+.dynamic-lighting[data-weather="sunny"] {
+  --ambient-intensity: 0.4;
+}
+
+.dynamic-lighting[data-weather="cloudy"] {
+  --ambient-intensity: 0.2;
+  --bloom-intensity: 0.1;
+}
+
+.dynamic-lighting[data-weather="rainy"] {
+  --ambient-intensity: 0.15;
+  --ambient-color: rgba(100, 120, 150, 0.1);
+}
+
+.dynamic-lighting[data-weather="stormy"] {
+  --ambient-intensity: 0.1;
+  --ambient-color: rgba(80, 90, 120, 0.08);
+}
+
+.dynamic-lighting[data-weather="snowy"] {
+  --ambient-intensity: 0.35;
+  --ambient-color: rgba(220, 230, 255, 0.15);
+}
+
+.dynamic-lighting[data-weather="foggy"] {
+  --ambient-intensity: 0.25;
+  --ambient-color: rgba(200, 200, 210, 0.2);
+}
+
+/* ============= 控制面板 ============= */
+.lighting-controls {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 100;
+}
+
+.lighting-controls button {
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.lighting-controls button:hover {
+  opacity: 1;
+  background: var(--surface-hover);
+}
+
+.lighting-controls button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* ============= 减少动画偏好 ============= */
+@media (prefers-reduced-motion: reduce) {
+  .light-source,
+  .lighting-bloom,
+  .god-ray {
+    animation: none !important;
+    transition: none !important;
+  }
+}

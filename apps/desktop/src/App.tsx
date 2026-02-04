@@ -7,6 +7,7 @@ import { DevPanel } from './components/DevPanel';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { EmotionParticles } from './components/EmotionParticles';
 import { EmotionBackground } from './components/EmotionBackground';
+import { DynamicLighting } from './components/DynamicLighting';
 import { SceneDirectorPanel } from './components/SceneDirectorPanel';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
@@ -46,6 +47,10 @@ function App() {
   const [sceneMode, setSceneMode] = createSignal<SceneMode>('casual_chat');
   const [sceneElements, setSceneElements] = createSignal<SceneElements>(sceneDirector.getCurrentElements());
   
+  // SOTA Round 41: 动态光照状态
+  const [timeOfDay, setTimeOfDay] = createSignal(sceneDirector.getState().timeOfDay);
+  const [weather, setWeather] = createSignal(sceneDirector.getState().weather);
+  
   // 初始化主题
   onMount(() => {
     initTheme();
@@ -54,6 +59,8 @@ function App() {
     const unsubScene = sceneDirector.onStateChange((state) => {
       setSceneMode(state.currentMode);
       setSceneElements(state.elements);
+      setTimeOfDay(state.timeOfDay);
+      setWeather(state.weather);
     });
     
     // 启动自动时间检测
@@ -279,6 +286,14 @@ function App() {
             showCounter={showDevPanel()}
           />
           
+          {/* 动态光照系统 - SOTA Round 41 */}
+          <DynamicLighting
+            enabled={(config().enableLighting ?? true) && sceneElements().lighting.enabled !== false}
+            emotion={systemState().currentEmotion}
+            timeOfDay={timeOfDay()}
+            weather={weather()}
+          />
+          
           <Avatar 
             modelPath={modelPath()}
             width={500}
@@ -406,6 +421,12 @@ function App() {
                     onClick={() => updateConfig({ enableParticles: !config().enableParticles })}
                   >
                     ✨ 粒子特效 {config().enableParticles ? '开' : '关'}
+                  </Button>
+                  <Button 
+                    active={config().enableLighting}
+                    onClick={() => updateConfig({ enableLighting: !config().enableLighting })}
+                  >
+                    💡 动态光照 {config().enableLighting ? '开' : '关'}
                   </Button>
                 </div>
               </div>

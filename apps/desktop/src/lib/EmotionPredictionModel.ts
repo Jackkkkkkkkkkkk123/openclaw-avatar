@@ -2,12 +2,16 @@
  * EmotionPredictionModel - 情绪预测模型
  * 
  * 基于多维度特征预测下一个情绪状态：
- * - 文本情感分析
+ * - 文本情感分析 (通过真实 LLM)
  * - 对话上下文
  * - 时间模式
  * - 用户偏好
  * - 情绪惯性
+ * 
+ * v2.0: 接入 OpenClaw LLM 实现真实 AI 情绪分析
  */
+
+import { llmService, EmotionAnalysisResult } from './LLMService';
 
 export type EmotionLabel = 
   | 'neutral' | 'happy' | 'sad' | 'angry'
@@ -23,6 +27,7 @@ export interface EmotionPrediction {
     confidence: number;
   }>;
   reasoning: string[];       // 预测依据
+  source: 'llm' | 'local';   // 预测来源
 }
 
 export interface TextFeatures {
@@ -49,14 +54,16 @@ export interface PredictionConfig {
   inertiaWeight: number;     // 惯性权重
   minConfidence: number;     // 最小置信度阈值
   topK: number;              // 返回前 K 个候选
+  useLLM: boolean;           // 是否使用 LLM (true=真实AI, false=本地fallback)
+  llmPredictionInterval: number; // LLM 预测间隔
 }
 
-// 情绪词典
-const EMOTION_LEXICON: Record<EmotionLabel, string[]> = {
+// 情绪词典 (仅作为 LLM 不可用时的 fallback)
+const EMOTION_LEXICON_FALLBACK: Record<EmotionLabel, string[]> = {
   neutral: ['好的', '嗯', '明白', '知道了', '行'],
   happy: ['开心', '高兴', '快乐', '太好了', '哈哈', '嘿嘿', '棒', '赞', '爱', '喜欢', '感谢', '谢谢'],
   sad: ['难过', '伤心', '失望', '遗憾', '可惜', '唉', '呜', '委屈', '心痛'],
-  angry: ['生气', '愤怒', '烦', '讨厌', '恨', '气死', '可恶', '混蛋', '操'],
+  angry: ['生气', '愤怒', '烦', '讨厌', '恨', '气死', '可恶', '混蛋'],
   surprised: ['哇', '天啊', '真的吗', '不会吧', '没想到', '居然', '震惊', '惊讶'],
   fear: ['害怕', '恐惧', '担心', '紧张', '不敢', '可怕', '吓人'],
   disgust: ['恶心', '讨厌', '烦', '无语', '服了', '醉了'],
@@ -84,15 +91,6 @@ const EMOTION_TRANSITIONS: Partial<Record<EmotionLabel, Partial<Record<EmotionLa
   confused: { confused: 0.3, thinking: 0.3, surprised: 0.2, neutral: 0.2 }
 };
 
-// 文本情感映射
-const SENTIMENT_EMOTION_MAP: Array<{ range: [number, number]; emotions: EmotionLabel[] }> = [
-  { range: [-1, -0.6], emotions: ['angry', 'sad', 'fear', 'disgust'] },
-  { range: [-0.6, -0.2], emotions: ['sad', 'confused', 'disappointed'] },
-  { range: [-0.2, 0.2], emotions: ['neutral', 'calm', 'thinking'] },
-  { range: [0.2, 0.6], emotions: ['happy', 'hopeful', 'grateful'] },
-  { range: [0.6, 1], emotions: ['happy', 'excited', 'proud'] }
-];
-
 type PredictionCallback = (prediction: EmotionPrediction) => void;
 
 export class EmotionPredictionModel {
@@ -100,6 +98,8 @@ export class EmotionPredictionModel {
   private emotionHistory: EmotionLabel[] = [];
   private textHistory: string[] = [];
   private callbacks: Set<PredictionCallback> = new Set();
+  private predictionsSinceLLM = 0;
+  private isPredicting = false;
 
   constructor(config?: Partial<PredictionConfig>) {
     this.config = {
@@ -108,18 +108,92 @@ export class EmotionPredictionModel {
       inertiaWeight: 0.2,
       minConfidence: 0.3,
       topK: 3,
+      useLLM: true,           // 默认使用真实 LLM
+      llmPredictionInterval: 1, // 每次都尝试 LLM
       ...config
     };
   }
 
   /**
-   * 预测情绪
+   * 预测情绪 (同步，本地分析，向后兼容)
    */
   predict(text: string, context?: Partial<ContextFeatures>): EmotionPrediction {
-    // 提取文本特征
+    return this.predictLocal(text, context);
+  }
+
+  /**
+   * 预测情绪 (异步，优先使用 LLM)
+   */
+  async predictAsync(text: string, context?: Partial<ContextFeatures>): Promise<EmotionPrediction> {
+    this.predictionsSinceLLM++;
+
+    // 优先尝试 LLM 分析
+    if (this.config.useLLM && 
+        this.predictionsSinceLLM >= this.config.llmPredictionInterval &&
+        llmService.isConnected() &&
+        !this.isPredicting) {
+      
+      const llmPrediction = await this.predictWithLLM(text);
+      if (llmPrediction) {
+        this.predictionsSinceLLM = 0;
+        
+        // 更新历史
+        this.textHistory.push(text);
+        this.emotionHistory.push(llmPrediction.emotion);
+        if (this.textHistory.length > 20) this.textHistory.shift();
+        if (this.emotionHistory.length > 20) this.emotionHistory.shift();
+        
+        this.notifyCallbacks(llmPrediction);
+        return llmPrediction;
+      }
+    }
+
+    // Fallback 到本地分析
+    return this.predictLocal(text, context);
+  }
+
+  /**
+   * 使用 LLM 预测情绪
+   */
+  private async predictWithLLM(text: string): Promise<EmotionPrediction | null> {
+    this.isPredicting = true;
+    
+    try {
+      const result = await llmService.analyzeEmotion(text);
+      
+      if (result) {
+        const prediction: EmotionPrediction = {
+          emotion: this.normalizeEmotion(result.emotion),
+          confidence: result.confidence,
+          alternatives: (result.alternatives || []).map(alt => ({
+            emotion: this.normalizeEmotion(alt.emotion),
+            confidence: alt.confidence
+          })),
+          reasoning: [result.reasoning, '(由 OpenClaw LLM 分析)'],
+          source: 'llm'
+        };
+
+        console.log('[EmotionPrediction] LLM 分析结果:', 
+          prediction.emotion, 
+          `(置信度: ${(prediction.confidence * 100).toFixed(0)}%)`);
+
+        return prediction;
+      }
+    } catch (e) {
+      console.error('[EmotionPrediction] LLM 分析错误:', e);
+    } finally {
+      this.isPredicting = false;
+    }
+
+    return null;
+  }
+
+  /**
+   * 本地预测 (fallback)
+   */
+  predictLocal(text: string, context?: Partial<ContextFeatures>): EmotionPrediction {
     const textFeatures = this.extractTextFeatures(text);
     
-    // 构建上下文特征
     const contextFeatures: ContextFeatures = {
       previousEmotions: this.emotionHistory.slice(-5),
       turnIndex: this.textHistory.length,
@@ -128,10 +202,8 @@ export class EmotionPredictionModel {
       userEngagement: context?.userEngagement ?? 0.7
     };
     
-    // 计算各情绪的得分
     const scores = this.calculateScores(textFeatures, contextFeatures);
     
-    // 排序并生成预测
     const sorted = Object.entries(scores)
       .sort((a, b) => b[1] - a[1])
       .slice(0, this.config.topK);
@@ -145,14 +217,14 @@ export class EmotionPredictionModel {
         emotion: emotion as EmotionLabel,
         confidence: totalScore > 0 ? score / totalScore : 0
       })),
-      reasoning: this.generateReasoning(textFeatures, contextFeatures, sorted[0][0] as EmotionLabel)
+      reasoning: this.generateReasoning(textFeatures, contextFeatures, sorted[0][0] as EmotionLabel),
+      source: 'local'
     };
     
     // 更新历史
     this.textHistory.push(text);
     this.emotionHistory.push(prediction.emotion);
     
-    // 限制历史长度
     if (this.textHistory.length > 20) this.textHistory.shift();
     if (this.emotionHistory.length > 20) this.emotionHistory.shift();
     
@@ -162,10 +234,22 @@ export class EmotionPredictionModel {
   }
 
   /**
-   * 批量预测
+   * 同步预测（别名，用于测试或快速场景）
+   * @deprecated 直接使用 predict() 即可
    */
-  predictBatch(texts: string[]): EmotionPrediction[] {
-    return texts.map(text => this.predict(text));
+  predictSync(text: string, context?: Partial<ContextFeatures>): EmotionPrediction {
+    return this.predict(text, context);
+  }
+
+  /**
+   * 批量预测 (异步)
+   */
+  async predictBatch(texts: string[]): Promise<EmotionPrediction[]> {
+    const results: EmotionPrediction[] = [];
+    for (const text of texts) {
+      results.push(await this.predict(text));
+    }
+    return results;
   }
 
   /**
@@ -173,6 +257,16 @@ export class EmotionPredictionModel {
    */
   analyzeText(text: string): TextFeatures {
     return this.extractTextFeatures(text);
+  }
+
+  /**
+   * 强制使用 LLM 分析 (不等待间隔)
+   */
+  async forceLLMPrediction(text: string): Promise<EmotionPrediction | null> {
+    if (!this.config.useLLM || !llmService.isConnected()) {
+      return null;
+    }
+    return this.predictWithLLM(text);
   }
 
   /**
@@ -206,13 +300,11 @@ export class EmotionPredictionModel {
       return { dominant: 'neutral', stability: 1 };
     }
     
-    // 计算情绪频率
     const counts: Partial<Record<EmotionLabel, number>> = {};
     for (const emotion of this.emotionHistory) {
       counts[emotion] = (counts[emotion] || 0) + 1;
     }
     
-    // 找出主导情绪
     let dominant: EmotionLabel = 'neutral';
     let maxCount = 0;
     for (const [emotion, count] of Object.entries(counts)) {
@@ -222,7 +314,6 @@ export class EmotionPredictionModel {
       }
     }
     
-    // 计算稳定性（主导情绪占比）
     const stability = maxCount / this.emotionHistory.length;
     
     return { dominant, stability };
@@ -242,6 +333,7 @@ export class EmotionPredictionModel {
   reset(): void {
     this.emotionHistory = [];
     this.textHistory = [];
+    this.predictionsSinceLLM = 0;
   }
 
   /**
@@ -259,32 +351,80 @@ export class EmotionPredictionModel {
   }
 
   /**
+   * 设置是否使用 LLM
+   */
+  setUseLLM(useLLM: boolean): void {
+    this.config.useLLM = useLLM;
+  }
+
+  /**
+   * 检查 LLM 是否可用
+   */
+  isLLMAvailable(): boolean {
+    return this.config.useLLM && llmService.isConnected();
+  }
+
+  /**
    * 获取可用情绪列表
    */
   static getAvailableEmotions(): EmotionLabel[] {
-    return Object.keys(EMOTION_LEXICON) as EmotionLabel[];
+    return Object.keys(EMOTION_LEXICON_FALLBACK) as EmotionLabel[];
   }
 
   /**
    * 获取情绪词汇
    */
   static getEmotionKeywords(emotion: EmotionLabel): string[] {
-    return [...(EMOTION_LEXICON[emotion] || [])];
+    return [...(EMOTION_LEXICON_FALLBACK[emotion] || [])];
+  }
+
+  // === 私有方法 ===
+
+  private normalizeEmotion(emotion: string): EmotionLabel {
+    const lower = emotion.toLowerCase();
+    const availableEmotions = EmotionPredictionModel.getAvailableEmotions();
+    
+    // 直接匹配
+    if (availableEmotions.includes(lower as EmotionLabel)) {
+      return lower as EmotionLabel;
+    }
+    
+    // 映射常见变体
+    const mappings: Record<string, EmotionLabel> = {
+      'joy': 'happy',
+      'happiness': 'happy',
+      'sadness': 'sad',
+      'anger': 'angry',
+      'surprise': 'surprised',
+      'fearful': 'fear',
+      'disgusted': 'disgust',
+      'excitement': 'excited',
+      'calmness': 'calm',
+      'confusion': 'confused',
+      'shyness': 'shy',
+      'pride': 'proud',
+      'gratitude': 'grateful',
+      'hope': 'hopeful'
+    };
+    
+    if (mappings[lower]) {
+      return mappings[lower];
+    }
+    
+    return 'neutral';
   }
 
   private extractTextFeatures(text: string): TextFeatures {
     const lower = text.toLowerCase();
     
-    // 检测情绪词汇
     const emotionWords: string[] = [];
     let sentimentSum = 0;
     let emotionCount = 0;
     
-    for (const [emotion, keywords] of Object.entries(EMOTION_LEXICON)) {
+    for (const [emotion, keywords] of Object.entries(EMOTION_LEXICON_FALLBACK)) {
       for (const keyword of keywords) {
         if (lower.includes(keyword)) {
           emotionWords.push(keyword);
-          // 计算情感值
           const emotionSentiment = this.getEmotionSentiment(emotion as EmotionLabel);
           sentimentSum += emotionSentiment;
           emotionCount++;
@@ -294,7 +434,6 @@ export class EmotionPredictionModel {
     
     const sentiment = emotionCount > 0 ? sentimentSum / emotionCount : 0;
     
-    // 计算激活程度（基于标点和词汇）
     const exclamCount = (text.match(/[!！]/g) || []).length;
     const questionCount = (text.match(/[?？]/g) || []).length;
     const arousal = Math.min(1, (exclamCount * 0.2 + questionCount * 0.1 + emotionWords.length * 0.1));
@@ -302,7 +441,7 @@ export class EmotionPredictionModel {
     return {
       sentiment,
       arousal,
-      dominance: 0.5 + sentiment * 0.3,  // 简化计算
+      dominance: 0.5 + sentiment * 0.3,
       hasQuestion: questionCount > 0,
       hasExclamation: exclamCount > 0,
       wordCount: text.length,
@@ -342,15 +481,12 @@ export class EmotionPredictionModel {
     for (const emotion of emotions) {
       let score = 0;
       
-      // 1. 文本特征得分
       const textScore = this.calculateTextScore(emotion, textFeatures);
       score += textScore * this.config.textWeight;
       
-      // 2. 上下文得分
       const contextScore = this.calculateContextScore(emotion, contextFeatures);
       score += contextScore * this.config.contextWeight;
       
-      // 3. 惯性得分
       const inertiaScore = this.calculateInertiaScore(emotion, contextFeatures.previousEmotions);
       score += inertiaScore * this.config.inertiaWeight;
       
@@ -363,20 +499,17 @@ export class EmotionPredictionModel {
   private calculateTextScore(emotion: EmotionLabel, features: TextFeatures): number {
     let score = 0;
     
-    // 检查是否有该情绪的关键词
-    const keywords = EMOTION_LEXICON[emotion] || [];
+    const keywords = EMOTION_LEXICON_FALLBACK[emotion] || [];
     for (const word of features.emotionWords) {
       if (keywords.includes(word)) {
         score += 0.3;
       }
     }
     
-    // 基于情感值匹配
     const emotionSentiment = this.getEmotionSentiment(emotion);
     const sentimentDiff = Math.abs(features.sentiment - emotionSentiment);
     score += Math.max(0, 1 - sentimentDiff) * 0.3;
     
-    // 激活程度匹配
     const highArousalEmotions: EmotionLabel[] = ['excited', 'angry', 'surprised', 'fear'];
     const lowArousalEmotions: EmotionLabel[] = ['calm', 'sad', 'neutral', 'thinking'];
     
@@ -386,7 +519,6 @@ export class EmotionPredictionModel {
       score += 0.2;
     }
     
-    // 问号倾向于困惑/思考
     if (features.hasQuestion && (emotion === 'confused' || emotion === 'thinking')) {
       score += 0.2;
     }
@@ -397,27 +529,22 @@ export class EmotionPredictionModel {
   private calculateContextScore(emotion: EmotionLabel, context: ContextFeatures): number {
     let score = 0;
     
-    // 对话阶段影响
     if (context.conversationPhase === 'greeting' && emotion === 'happy') {
       score += 0.3;
     } else if (context.conversationPhase === 'farewell' && (emotion === 'calm' || emotion === 'grateful')) {
       score += 0.3;
     }
     
-    // 话题类别影响
     if (context.topicCategory === 'emotion') {
-      // 情感话题更可能有强烈情绪
       if (['happy', 'sad', 'angry', 'fear'].includes(emotion)) {
         score += 0.2;
       }
     } else if (context.topicCategory === 'task') {
-      // 任务话题更可能是中性/思考
       if (['neutral', 'thinking', 'calm'].includes(emotion)) {
         score += 0.2;
       }
     }
     
-    // 用户参与度影响
     if (context.userEngagement > 0.7 && ['happy', 'excited', 'grateful'].includes(emotion)) {
       score += 0.1;
     }
@@ -430,10 +557,7 @@ export class EmotionPredictionModel {
     
     const lastEmotion = previousEmotions[previousEmotions.length - 1];
     
-    // 转移概率
     const transitionProb = this.getTransitionProbability(lastEmotion, emotion);
-    
-    // 历史频率
     const frequency = previousEmotions.filter(e => e === emotion).length / previousEmotions.length;
     
     return transitionProb * 0.6 + frequency * 0.4;
@@ -470,6 +594,7 @@ export class EmotionPredictionModel {
     }
     
     reasons.push(`对话阶段: ${context.conversationPhase}`);
+    reasons.push('(本地分析 - LLM 不可用)');
     
     return reasons;
   }
