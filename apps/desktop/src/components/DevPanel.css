@@ -1,0 +1,295 @@
+/**
+ * Dev Panel Styles
+ * 
+ * 开发者调试面板样式
+ */
+
+/* CSS Variables */
+.dev-panel {
+  --dev-bg: rgba(0, 0, 0, 0.85);
+  --dev-border: rgba(57, 197, 187, 0.3);
+  --dev-text: #e0e0e0;
+  --dev-text-dim: #888;
+  --dev-accent: #39c5bb;
+  --dev-color-success: #4caf50;
+  --dev-color-warning: #ff9800;
+  --dev-color-error: #f44336;
+}
+
+.dev-panel {
+  position: fixed;
+  z-index: 9999;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--dev-text);
+  user-select: none;
+}
+
+/* 位置 */
+.dev-panel--top-left {
+  top: 10px;
+  left: 10px;
+}
+
+.dev-panel--top-right {
+  top: 10px;
+  right: 10px;
+}
+
+.dev-panel--bottom-left {
+  bottom: 10px;
+  left: 10px;
+}
+
+.dev-panel--bottom-right {
+  bottom: 10px;
+  right: 10px;
+}
+
+/* 切换按钮 */
+.dev-panel__toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--dev-bg);
+  border: 1px solid var(--dev-border);
+  border-radius: 6px;
+  color: var(--dev-accent);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dev-panel__toggle:hover {
+  background: rgba(57, 197, 187, 0.1);
+  border-color: var(--dev-accent);
+}
+
+/* 展开时的容器 */
+.dev-panel--expanded .dev-panel__toggle {
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+
+/* 内容区域 */
+.dev-panel__content {
+  width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--dev-bg);
+  border: 1px solid var(--dev-border);
+  border-radius: 0 0 6px 6px;
+  backdrop-filter: blur(10px);
+}
+
+/* 标签页 */
+.dev-panel__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--dev-border);
+}
+
+.dev-panel__tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: var(--dev-text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dev-panel__tab:hover {
+  color: var(--dev-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dev-panel__tab.active {
+  color: var(--dev-accent);
+  border-bottom: 2px solid var(--dev-accent);
+  margin-bottom: -1px;
+}
+
+/* 区块 */
+.dev-panel__section {
+  padding: 12px;
+}
+
+.dev-panel__section h4 {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dev-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dev-panel__section h4:not(:first-child) {
+  margin-top: 16px;
+}
+
+/* 性能指标网格 */
+.dev-panel__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dev-panel__metric {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.metric-label {
+  font-size: 10px;
+  color: var(--dev-text-dim);
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 评级 */
+.dev-panel__rating {
+  margin-top: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* 运行时间 */
+.dev-panel__uptime {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--dev-text-dim);
+  font-size: 11px;
+}
+
+/* 信息行 */
+.dev-panel__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.info-row span:first-child {
+  color: var(--dev-text-dim);
+}
+
+/* 开关行 */
+.dev-panel__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggle-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.toggle-row input[type="checkbox"] {
+  accent-color: var(--dev-accent);
+  width: 14px;
+  height: 14px;
+}
+
+/* 按钮 */
+.dev-panel__btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  background: rgba(57, 197, 187, 0.1);
+  border: 1px solid var(--dev-border);
+  border-radius: 4px;
+  color: var(--dev-accent);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dev-panel__btn:hover {
+  background: rgba(57, 197, 187, 0.2);
+  border-color: var(--dev-accent);
+}
+
+.dev-panel__btn:active {
+  transform: scale(0.98);
+}
+
+/* 标签列表 */
+.dev-panel__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dev-panel__tag {
+  padding: 2px 6px;
+  background: rgba(57, 197, 187, 0.15);
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--dev-accent);
+}
+
+/* 小文本 */
+.dev-panel__mini-text {
+  font-size: 10px;
+  color: var(--dev-text-dim);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+/* 滚动条 */
+.dev-panel__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dev-panel__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dev-panel__content::-webkit-scrollbar-thumb {
+  background: rgba(57, 197, 187, 0.3);
+  border-radius: 3px;
+}
+
+.dev-panel__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(57, 197, 187, 0.5);
+}
+
+/* 动画 */
+@keyframes dev-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dev-panel__metric.updating .metric-value {
+  animation: dev-pulse 0.3s ease;
+}

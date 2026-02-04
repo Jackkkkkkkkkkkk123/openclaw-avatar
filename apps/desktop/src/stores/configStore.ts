@@ -18,6 +18,7 @@ export interface AppConfig {
   showChat: boolean;
   chatPosition: 'right' | 'left';
   controlsExpanded: boolean;
+  showDevPanel: boolean;  // 开发者面板
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -30,6 +31,7 @@ const DEFAULT_CONFIG: AppConfig = {
   showChat: true,
   chatPosition: 'right',
   controlsExpanded: true,
+  showDevPanel: false,  // 默认关闭开发者面板
 };
 
 const STORAGE_KEY = 'openclaw-avatar-config-v2'; // v2: 强制使用内置配置

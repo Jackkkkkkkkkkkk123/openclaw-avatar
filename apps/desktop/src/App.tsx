@@ -3,10 +3,12 @@ import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import Avatar from './components/Avatar';
 import { ChatPanel, type ChatMessage } from './components/ChatPanel';
 import { SettingsDialog } from './components/SettingsDialog';
+import { DevPanel } from './components/DevPanel';
 import { Button } from './components/ui';
 import { avatarController, type Expression, type MotionGroup } from './lib/AvatarController';
 import { avatarSystem, type SystemState } from './lib/AvatarSystem';
 import { lipSyncDriver } from './lib/LipSyncDriver';
+import { performanceMonitor } from './lib/PerformanceMonitor';
 import { config, updateConfig } from './stores/configStore';
 import { initTheme, toggleTheme, getThemeIcon } from './stores/themeStore';
 import './theme.css';
@@ -30,6 +32,7 @@ function App() {
   // UI 状态
   const [showSettings, setShowSettings] = createSignal(false);
   const [controlsExpanded, setControlsExpanded] = createSignal(config().controlsExpanded);
+  const [showDevPanel, setShowDevPanel] = createSignal(config().showDevPanel ?? false);
   
   // 当前模型路径
   const [modelPath, setModelPath] = createSignal(config().modelPath);
@@ -174,6 +177,7 @@ function App() {
   // 清理
   onCleanup(() => {
     avatarSystem.destroy();
+    performanceMonitor.destroy();
   });
   
   return (
@@ -186,6 +190,18 @@ function App() {
         </div>
         
         <div class="app-header__actions">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              setShowDevPanel(!showDevPanel());
+              updateConfig({ showDevPanel: !showDevPanel() });
+            }}
+            title="开发者面板"
+            active={showDevPanel()}
+          >
+            🛠️
+          </Button>
           <Button variant="ghost" size="sm" onClick={toggleTheme} title="切换主题">
             {getThemeIcon(config().theme)}
           </Button>
@@ -344,6 +360,13 @@ function App() {
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
         onModelChange={handleModelChange}
+      />
+      
+      {/* 开发者调试面板 */}
+      <DevPanel
+        systemState={systemState()}
+        visible={showDevPanel()}
+        position="top-right"
       />
     </main>
   );
