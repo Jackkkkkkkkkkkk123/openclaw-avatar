@@ -29,4 +29,49 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  
+  // 🚀 Phase 5: 性能优化
+  build: {
+    // 代码分割
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Live2D 相关单独分块
+          'live2d': ['pixi.js', 'pixi-live2d-display'],
+          // UI 组件单独分块
+          'ui': ['@kobalte/core'],
+        },
+      },
+    },
+    // 压缩配置
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // 生产环境移除 console
+        drop_debugger: true,
+      },
+    },
+    // 资源内联阈值 (4KB 以下内联)
+    assetsInlineLimit: 4096,
+    // 启用 CSS 代码分割
+    cssCodeSplit: true,
+    // 源码映射 (生产环境关闭)
+    sourcemap: false,
+    // 目标浏览器
+    target: 'esnext',
+    // chunk 大小警告阈值
+    chunkSizeWarningLimit: 1000,
+  },
+  
+  // 依赖优化
+  optimizeDeps: {
+    include: ['solid-js', 'pixi.js', 'pixi-live2d-display'],
+    exclude: ['@tauri-apps/api', '@tauri-apps/plugin-opener'],
+  },
+  
+  // esbuild 配置
+  esbuild: {
+    // 生产环境移除 console
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
 }));

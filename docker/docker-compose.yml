@@ -1,0 +1,27 @@
+# 🎵 OpenClaw Avatar - Docker Compose
+# 快速部署 Web 版本
+
+version: '3.8'
+
+services:
+  avatar:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: openclaw-avatar
+    ports:
+      - "3939:80"
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+# 可选：添加 HTTPS (使用 Traefik 或 Caddy)
+# networks:
+#   default:
+#     external:
+#       name: traefik_network

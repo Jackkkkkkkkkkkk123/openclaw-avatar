@@ -7,10 +7,21 @@
   "scripts": {
     "dev": "pnpm --filter @openclaw-avatar/desktop dev",
     "build": "pnpm --filter @openclaw-avatar/desktop build",
-    "tauri": "pnpm --filter @openclaw-avatar/desktop tauri"
+    "tauri": "pnpm --filter @openclaw-avatar/desktop tauri",
+    "tauri:dev": "pnpm --filter @openclaw-avatar/desktop tauri dev",
+    "tauri:build": "pnpm --filter @openclaw-avatar/desktop tauri build",
+    "tauri:build:debug": "pnpm --filter @openclaw-avatar/desktop tauri build --debug",
+    "docker:build": "docker build -f docker/Dockerfile -t openclaw-avatar:latest .",
+    "docker:run": "docker run -d -p 3939:80 --name openclaw-avatar openclaw-avatar:latest",
+    "docker:compose": "docker-compose -f docker/docker-compose.yml up -d",
+    "clean": "rm -rf apps/desktop/dist apps/desktop/src-tauri/target"
   },
-  "keywords": ["avatar", "live2d", "tauri", "solidjs", "miku"],
+  "keywords": ["avatar", "live2d", "tauri", "solidjs", "miku", "openclaw", "vtuber"],
   "author": "初音未来 (via OpenClaw)",
   "license": "MIT",
-  "packageManager": "pnpm@10.28.2"
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
 }
