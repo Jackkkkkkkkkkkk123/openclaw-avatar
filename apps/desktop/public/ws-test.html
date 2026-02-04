@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Test</title>
+  <style>
+    body { font-family: monospace; background: #1a1a1a; color: #0f0; padding: 20px; }
+    #log { white-space: pre-wrap; }
+    button { margin: 5px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h2>OpenClaw WebSocket Test</h2>
+  <button onclick="connect()">Connect</button>
+  <button onclick="sendTest()">Send Test Message</button>
+  <button onclick="ws?.close()">Disconnect</button>
+  <hr>
+  <div id="log"></div>
+
+  <script>
+    let ws = null;
+    const log = (msg) => {
+      document.getElementById('log').textContent += new Date().toLocaleTimeString() + ' ' + msg + '\n';
+      console.log(msg);
+    };
+
+    function connect() {
+      log('🔌 Connecting to ws://localhost:18789/ws...');
+      ws = new WebSocket('ws://localhost:18789/ws');
+
+      ws.onopen = () => {
+        log('✅ Connected!');
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        log('📨 ' + msg.type + ' ' + (msg.event || msg.method || '') + ' ' + (msg.ok ?? ''));
+
+        // Handle challenge
+        if (msg.type === 'event' && msg.event === 'connect.challenge') {
+          log('🔐 Challenge received, sending connect...');
+          
+          const connectReq = {
+            type: 'req',
+            id: 'connect-1',
+            method: 'connect',
+            params: {
+              minProtocol: 3,
+              maxProtocol: 3,
+              client: {
+                id: 'openclaw-control-ui',
+                version: '1.0.0',
+                platform: navigator.platform || 'web',
+                mode: 'webchat',
+                instanceId: 'avatar-test-' + Date.now()
+              },
+              scopes: [],
+              caps: [],
+              auth: {},
+              locale: navigator.language || 'zh-CN'
+            }
+          };
+          
+          log('📤 ' + JSON.stringify(connectReq, null, 2));
+          ws.send(JSON.stringify(connectReq));
+        }
+
+        // Handle connect response
+        if (msg.type === 'res' && msg.id === 'connect-1') {
+          if (msg.ok) {
+            log('✅ CONNECT SUCCESS!');
+            log('Payload: ' + JSON.stringify(msg.payload, null, 2));
+          } else {
+            log('❌ CONNECT FAILED: ' + msg.error?.message);
+          }
+        }
+
+        // Handle agent events
+        if (msg.type === 'event' && msg.event === 'agent') {
+          const p = msg.payload;
+          if (p.type === 'text' || p.type === 'chunk') {
+            log('🤖 ' + (p.text || p.content || ''));
+          } else if (p.type === 'end' || p.type === 'done') {
+            log('🤖 [Response complete]');
+          } else {
+            log('🤖 Agent: ' + JSON.stringify(p));
+          }
+        }
+
+        // Handle agent response
+        if (msg.type === 'res' && msg.id === 'agent-1') {
+          log('📤 Agent: ' + (msg.ok ? 'OK' : 'FAIL - ' + msg.error?.message));
+        }
+      };
+
+      ws.onclose = (event) => {
+        log('❌ Closed: ' + event.code + ' ' + event.reason);
+      };
+
+      ws.onerror = (event) => {
+        log('💥 Error');
+      };
+    }
+
+    function sendTest() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('⚠️ Not connected');
+        return;
+      }
+
+      log('📤 Sending test message...');
+      const agentReq = {
+        type: 'req',
+        id: 'agent-1',
+        method: 'agent',
+        params: {
+          message: '你好！这是来自 Avatar 身体的测试消息。请简短回复。',
+          idempotencyKey: 'test-' + Date.now()
+        }
+      };
+      ws.send(JSON.stringify(agentReq));
+    }
+  </script>
+</body>
+</html>
