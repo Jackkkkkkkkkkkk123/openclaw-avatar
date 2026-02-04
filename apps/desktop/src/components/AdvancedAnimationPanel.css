@@ -1,0 +1,234 @@
+/* Advanced Animation Panel Styles */
+
+.advanced-panel {
+  background: var(--bg-secondary, rgba(30, 30, 40, 0.95));
+  border-radius: 12px;
+  padding: 16px;
+  color: var(--text-primary, #e0e0e0);
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 400px;
+}
+
+.advanced-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: var(--accent, #39c5bb);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  padding-bottom: 8px;
+}
+
+.advanced-panel h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+.panel-section {
+  margin-bottom: 20px;
+}
+
+.panel-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Toggle Group */
+.toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.toggle-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent, #39c5bb);
+}
+
+/* Viseme Grid */
+.viseme-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.viseme-btn {
+  padding: 8px 4px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+  border-radius: 6px;
+  background: var(--bg-tertiary, rgba(50, 50, 60, 0.8));
+  color: var(--text-primary, #e0e0e0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viseme-btn:hover {
+  background: var(--accent, #39c5bb);
+  color: #000;
+  transform: scale(1.05);
+}
+
+.viseme-btn:active {
+  transform: scale(0.95);
+}
+
+/* Text Test */
+.text-test {
+  display: flex;
+  gap: 8px;
+}
+
+.text-test input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+  border-radius: 6px;
+  background: var(--bg-tertiary, rgba(50, 50, 60, 0.8));
+  color: var(--text-primary, #e0e0e0);
+  font-size: 13px;
+}
+
+.text-test input:focus {
+  outline: none;
+  border-color: var(--accent, #39c5bb);
+}
+
+.play-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent, #39c5bb);
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.play-btn:hover:not(:disabled) {
+  background: var(--accent-hover, #2fb5ab);
+  transform: scale(1.02);
+}
+
+.play-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Reaction Grid */
+.reaction-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.reaction-btn {
+  padding: 10px 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  background: var(--bg-tertiary, rgba(50, 50, 60, 0.8));
+  color: var(--text-primary, #e0e0e0);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reaction-btn:hover {
+  background: rgba(57, 197, 187, 0.2);
+  border-color: var(--accent, #39c5bb);
+  transform: translateY(-2px);
+}
+
+.reaction-btn:active {
+  transform: translateY(0);
+}
+
+.analyze-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--accent, #39c5bb);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent, #39c5bb);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.analyze-btn:hover {
+  background: rgba(57, 197, 187, 0.15);
+}
+
+/* Status Section */
+.status-section {
+  background: var(--bg-tertiary, rgba(50, 50, 60, 0.5));
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.status-item:last-child {
+  margin-bottom: 0;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(255, 100, 100, 0.2);
+  color: #ff6b6b;
+}
+
+.status-badge.active {
+  background: rgba(57, 197, 187, 0.2);
+  color: var(--accent, #39c5bb);
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: light) {
+  .advanced-panel {
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+  }
+  
+  .advanced-panel h3 {
+    color: #39c5bb;
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  .advanced-panel h4 {
+    color: #666;
+  }
+  
+  .viseme-btn,
+  .reaction-btn,
+  .text-test input {
+    background: rgba(240, 240, 245, 0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+  }
+  
+  .status-section {
+    background: rgba(240, 240, 245, 0.7);
+  }
+}
