@@ -524,6 +524,204 @@ describe('ExpressionSequencer', () => {
   });
 });
 
+// ========== Round 24 新增序列测试 ==========
+
+describe('Round 24 新增预设序列', () => {
+  let sequencer: ExpressionSequencer;
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    sequencer = new ExpressionSequencer();
+  });
+  
+  afterEach(() => {
+    sequencer.stop();
+    vi.useRealTimers();
+  });
+  
+  it('应该包含 8 个新增预设序列', () => {
+    const presets = sequencer.getPresetNames();
+    
+    // 新增的 8 个序列
+    expect(presets).toContain('panicRecovery');
+    expect(presets).toContain('deepThinking');
+    expect(presets).toContain('touchedToTears');
+    expect(presets).toContain('actCute');
+    expect(presets).toContain('angerCoolDown');
+    expect(presets).toContain('doubleDelight');
+    expect(presets).toContain('lonelyToHope');
+    expect(presets).toContain('stubbornDetermined');
+    
+    // 原有的 10 个
+    expect(presets).toContain('delighted');
+    expect(presets).toContain('shyReaction');
+    expect(presets).toContain('figureOut');
+    expect(presets).toContain('sympathy');
+    expect(presets).toContain('playfulWink');
+    expect(presets).toContain('nervousWait');
+    expect(presets).toContain('flattered');
+    expect(presets).toContain('disappointmentRecovery');
+    expect(presets).toContain('curiousExplore');
+    expect(presets).toContain('gentleComfort');
+    
+    // 总计 18 个预设序列
+    expect(presets.length).toBeGreaterThanOrEqual(18);
+  });
+  
+  it('应该能播放 panicRecovery 序列', () => {
+    const result = sequencer.playPreset('panicRecovery');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('panicRecovery');
+  });
+  
+  it('应该能播放 deepThinking 序列', () => {
+    const result = sequencer.playPreset('deepThinking');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('deepThinking');
+  });
+  
+  it('应该能播放 touchedToTears 序列', () => {
+    const result = sequencer.playPreset('touchedToTears');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('touchedToTears');
+  });
+  
+  it('应该能播放 actCute 序列', () => {
+    const result = sequencer.playPreset('actCute');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('actCute');
+  });
+});
+
+// ========== Round 24 新增文本触发测试 ==========
+
+describe('Round 24 新增文本分析触发', () => {
+  let sequencer: ExpressionSequencer;
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    sequencer = new ExpressionSequencer();
+  });
+  
+  afterEach(() => {
+    sequencer.stop();
+    vi.useRealTimers();
+  });
+  
+  // 双重惊喜
+  it('应该识别双重惊喜关键词并播放 doubleDelight', () => {
+    const result = sequencer.analyzeAndPlaySequence('天哪天哪，这太不可思议了！');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('doubleDelight');
+  });
+  
+  it('应该识别 OMG 并播放 doubleDelight', () => {
+    const result = sequencer.analyzeAndPlaySequence('OMG this is incredible!');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('doubleDelight');
+  });
+  
+  // 感动
+  it('应该识别感动关键词并播放 touchedToTears', () => {
+    const result = sequencer.analyzeAndPlaySequence('好感动，我要泪目了');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('touchedToTears');
+  });
+  
+  it('应该识别破防关键词并播放 touchedToTears', () => {
+    const result = sequencer.analyzeAndPlaySequence('这也太暖心了，破防了');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('touchedToTears');
+  });
+  
+  // 撒娇卖萌
+  it('应该识别撒娇关键词并播放 actCute', () => {
+    const result = sequencer.analyzeAndPlaySequence('求求你啦，拜托~');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('actCute');
+  });
+  
+  it('应该识别嘤嘤关键词并播放 actCute', () => {
+    const result = sequencer.analyzeAndPlaySequence('嘤嘤嘤，我想要');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('actCute');
+  });
+  
+  // 深度思考
+  it('应该识别深度思考关键词并播放 deepThinking', () => {
+    const result = sequencer.analyzeAndPlaySequence('让我想想，这个问题需要认真考虑');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('deepThinking');
+  });
+  
+  it('应该识别 let me think 并播放 deepThinking', () => {
+    const result = sequencer.analyzeAndPlaySequence('Hmm, let me think about this');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('deepThinking');
+  });
+  
+  // 惊慌恢复
+  it('应该识别惊慌关键词并播放 panicRecovery', () => {
+    const result = sequencer.analyzeAndPlaySequence('吓死了，好险！还好是虚惊一场');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('panicRecovery');
+  });
+  
+  // 孤独到希望
+  it('应该识别孤独关键词并播放 lonelyToHope', () => {
+    const result = sequencer.analyzeAndPlaySequence('一个人好孤单，但是有你陪着我');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('lonelyToHope');
+  });
+  
+  // 生气冷静
+  it('应该识别生气关键词并播放 angerCoolDown', () => {
+    const result = sequencer.analyzeAndPlaySequence('气死了！算了算了，不气了');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('angerCoolDown');
+  });
+  
+  // 倔强坚定
+  it('应该识别倔强关键词并播放 stubbornDetermined', () => {
+    const result = sequencer.analyzeAndPlaySequence('我能行，绝不放弃！');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('stubbornDetermined');
+  });
+  
+  it('应该识别 never give up 并播放 stubbornDetermined', () => {
+    const result = sequencer.analyzeAndPlaySequence('I will never give up!');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('stubbornDetermined');
+  });
+  
+  // 温柔安慰
+  it('应该识别安慰关键词并播放 gentleComfort', () => {
+    const result = sequencer.analyzeAndPlaySequence('没事的，会好的，有我在');
+    
+    expect(result).toBe(true);
+    expect(sequencer.getCurrentSequenceName()).toBe('gentleComfort');
+  });
+});
+
 // ========== 单例测试 ==========
 
 describe('expressionSequencer 单例', () => {

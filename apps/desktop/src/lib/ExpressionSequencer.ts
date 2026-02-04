@@ -136,6 +136,100 @@ const PRESET_SEQUENCES: Record<string, ExpressionSequence> = {
       { expression: 'hopeful', duration: 1200 },
     ],
   },
+  
+  // ========== SOTA Round 24 新增序列 ==========
+  
+  // 惊慌失措（惊讶 → 害怕 → 焦虑 → 释然）
+  panicRecovery: {
+    name: 'panicRecovery',
+    steps: [
+      { expression: 'surprised', duration: 300 },
+      { expression: 'fear', duration: 600 },
+      { expression: 'anxious', duration: 800 },
+      { expression: 'relieved', duration: 1500 },
+    ],
+  },
+  
+  // 深度思考（好奇 → 思考 → 专注 → 恍然大悟）
+  deepThinking: {
+    name: 'deepThinking',
+    steps: [
+      { expression: 'curious', duration: 500 },
+      { expression: 'thinking', duration: 1200 },
+      { expression: 'determined', duration: 800 },
+      { expression: 'excited', duration: 600 },
+      { expression: 'happy', duration: 1000 },
+    ],
+  },
+  
+  // 感动落泪（惊讶 → 感激 → 感动 → 开心）
+  touchedToTears: {
+    name: 'touchedToTears',
+    steps: [
+      { expression: 'surprised', duration: 400 },
+      { expression: 'grateful', duration: 800 },
+      { expression: 'loving', duration: 1000, blend: { target: 'sad', ratio: 0.3 } },
+      { expression: 'happy', duration: 1200, blend: { target: 'grateful', ratio: 0.4 } },
+    ],
+  },
+  
+  // 撒娇卖萌（俏皮 → 害羞 → 期待 → 开心）
+  actCute: {
+    name: 'actCute',
+    steps: [
+      { expression: 'playful', duration: 600 },
+      { expression: 'embarrassed', duration: 500 },
+      { expression: 'hopeful', duration: 800 },
+      { expression: 'happy', duration: 1000, blend: { target: 'playful', ratio: 0.3 } },
+    ],
+  },
+  
+  // 生气冷静（生气 → 失望 → 思考 → 释然）
+  angerCoolDown: {
+    name: 'angerCoolDown',
+    steps: [
+      { expression: 'angry', duration: 800 },
+      { expression: 'disappointed', duration: 600 },
+      { expression: 'thinking', duration: 700 },
+      { expression: 'relieved', duration: 1000 },
+      { expression: 'neutral', duration: 800 },
+    ],
+  },
+  
+  // 惊喜连连（惊讶 → 兴奋 → 惊讶 → 更兴奋 → 开心）
+  doubleDelight: {
+    name: 'doubleDelight',
+    steps: [
+      { expression: 'surprised', duration: 400 },
+      { expression: 'excited', duration: 600 },
+      { expression: 'surprised', duration: 300 },
+      { expression: 'excited', duration: 800, blend: { target: 'happy', ratio: 0.5 } },
+      { expression: 'happy', duration: 1500 },
+    ],
+  },
+  
+  // 孤独到希望（孤独 → 悲伤 → 思考 → 期待 → 开心）
+  lonelyToHope: {
+    name: 'lonelyToHope',
+    steps: [
+      { expression: 'lonely', duration: 800 },
+      { expression: 'sad', duration: 600 },
+      { expression: 'thinking', duration: 500 },
+      { expression: 'hopeful', duration: 700 },
+      { expression: 'happy', duration: 1200 },
+    ],
+  },
+  
+  // 倔强坚定（失望 → 生气 → 坚定 → 骄傲）
+  stubbornDetermined: {
+    name: 'stubbornDetermined',
+    steps: [
+      { expression: 'disappointed', duration: 500 },
+      { expression: 'angry', duration: 400, blend: { target: 'determined', ratio: 0.3 } },
+      { expression: 'determined', duration: 1000 },
+      { expression: 'proud', duration: 1200 },
+    ],
+  },
 };
 
 // ========== 情绪惯性系统 ==========
@@ -502,41 +596,104 @@ export class ExpressionSequencer {
 
   /**
    * 根据文本智能选择表情序列
+   * SOTA Round 24: 扩展到 16 种触发模式
    */
   analyzeAndPlaySequence(text: string): boolean {
     const lowerText = text.toLowerCase();
     
-    // 检测模式并选择序列
-    if (this.containsAny(lowerText, ['哇', '天啊', '太棒了', 'wow', 'amazing', '太好了', '太赞了'])) {
+    // ========== 积极情绪序列 ==========
+    
+    // 惊喜反应
+    if (this.containsAny(lowerText, ['哇', '天啊', '太棒了', 'wow', 'amazing', '太好了', '太赞了', '绝了', '牛', 'awesome'])) {
       return this.playPreset('delighted');
     }
     
-    if (this.containsAny(lowerText, ['害羞', '不好意思', 'blush', '///', '脸红'])) {
-      return this.playPreset('shyReaction');
+    // 双重惊喜（更强烈的惊喜）
+    if (this.containsAny(lowerText, ['天哪天哪', '我的天', 'oh my god', 'omg', '不敢相信', '太不可思议', '震惊'])) {
+      return this.playPreset('doubleDelight');
     }
     
-    if (this.containsAny(lowerText, ['原来如此', '明白了', '懂了', 'i see', 'got it', '恍然大悟'])) {
-      return this.playPreset('figureOut');
-    }
-    
-    if (this.containsAny(lowerText, ['辛苦了', '不容易', '心疼', '抱抱', 'poor'])) {
-      return this.playPreset('sympathy');
-    }
-    
-    if (this.containsAny(lowerText, ['谢谢夸奖', '过奖', '哪里哪里', 'flattered', '被夸'])) {
+    // 被夸奖
+    if (this.containsAny(lowerText, ['谢谢夸奖', '过奖', '哪里哪里', 'flattered', '被夸', '你真会说话', '嘿嘿谢谢'])) {
       return this.playPreset('flattered');
     }
     
-    if (this.containsAny(lowerText, ['为什么', '怎么', '什么是', 'why', 'what', 'how', '好奇'])) {
+    // 感动
+    if (this.containsAny(lowerText, ['好感动', '感动哭', '太暖了', 'touched', '泪目', '破防了', '暖心'])) {
+      return this.playPreset('touchedToTears');
+    }
+    
+    // ========== 害羞/可爱序列 ==========
+    
+    // 害羞
+    if (this.containsAny(lowerText, ['害羞', '不好意思', 'blush', '///', '脸红', '羞羞', '人家'])) {
+      return this.playPreset('shyReaction');
+    }
+    
+    // 撒娇卖萌
+    if (this.containsAny(lowerText, ['求求', '拜托', '嘤嘤', '人家想', 'please', '卖萌', '撒娇', 'pwease'])) {
+      return this.playPreset('actCute');
+    }
+    
+    // 调皮眨眼
+    if (this.containsAny(lowerText, ['嘿嘿', '嘻嘻', '调皮', 'hehe', '眨眼', '坏笑', '略略略'])) {
+      return this.playPreset('playfulWink');
+    }
+    
+    // ========== 思考/理解序列 ==========
+    
+    // 恍然大悟
+    if (this.containsAny(lowerText, ['原来如此', '明白了', '懂了', 'i see', 'got it', '恍然大悟', '原来是这样'])) {
+      return this.playPreset('figureOut');
+    }
+    
+    // 深度思考
+    if (this.containsAny(lowerText, ['让我想想', '思考一下', 'let me think', '仔细想', '认真考虑', 'hmm', '嗯...'])) {
+      return this.playPreset('deepThinking');
+    }
+    
+    // 好奇探索
+    if (this.containsAny(lowerText, ['为什么', '怎么', '什么是', 'why', 'what', 'how', '好奇', '想知道', '告诉我'])) {
       return this.playPreset('curiousExplore');
     }
     
-    if (this.containsAny(lowerText, ['没关系', '下次', '加油', '振作', '别灰心'])) {
+    // ========== 关心/安慰序列 ==========
+    
+    // 同情安慰
+    if (this.containsAny(lowerText, ['辛苦了', '不容易', '心疼', '抱抱', 'poor', '受苦了', '太难了'])) {
+      return this.playPreset('sympathy');
+    }
+    
+    // 温柔安慰
+    if (this.containsAny(lowerText, ['没事的', '会好的', '在这里', '陪你', 'it\'s okay', '别担心', '有我在'])) {
+      return this.playPreset('gentleComfort');
+    }
+    
+    // ========== 负面情绪恢复序列 ==========
+    
+    // 失望恢复
+    if (this.containsAny(lowerText, ['没关系', '下次', '加油', '振作', '别灰心', '继续努力', '失败是成功'])) {
       return this.playPreset('disappointmentRecovery');
     }
     
-    if (this.containsAny(lowerText, ['嘿嘿', '嘻嘻', '调皮', 'hehe', '眨眼'])) {
-      return this.playPreset('playfulWink');
+    // 惊慌恢复
+    if (this.containsAny(lowerText, ['吓死了', '好险', '差点', 'scared', '心脏', '虚惊一场', '还好'])) {
+      return this.playPreset('panicRecovery');
+    }
+    
+    // 从孤独到希望
+    if (this.containsAny(lowerText, ['一个人', '孤单', 'alone', 'lonely', '没人', '但是有你', '还有你'])) {
+      return this.playPreset('lonelyToHope');
+    }
+    
+    // 生气冷静
+    if (this.containsAny(lowerText, ['气死了', '好生气', '算了算了', '冷静', 'angry', '不气了', '消消气'])) {
+      return this.playPreset('angerCoolDown');
+    }
+    
+    // 倔强坚定
+    if (this.containsAny(lowerText, ['我能行', '一定要', '必须', '绝不放弃', 'never give up', '坚持', '我偏要'])) {
+      return this.playPreset('stubbornDetermined');
     }
     
     return false;
