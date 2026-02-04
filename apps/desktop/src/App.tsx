@@ -57,21 +57,18 @@ function App() {
   onMount(() => {
     initTheme();
     
-    // 订阅场景导演状态变化
-    const unsubScene = sceneDirector.onStateChange((state) => {
-      setSceneMode(state.currentMode);
-      setSceneElements(state.elements);
-      setTimeOfDay(state.timeOfDay);
-      setWeather(state.weather);
-    });
-    
-    // 启动自动时间检测
-    sceneDirector.startAutoTimeDetection();
-    
-    onCleanup(() => {
-      unsubScene();
-      sceneDirector.stopAutoTimeDetection();
-    });
+    // 场景导演（花架子，禁用）
+    // const unsubScene = sceneDirector.onStateChange((state) => {
+    //   setSceneMode(state.currentMode);
+    //   setSceneElements(state.elements);
+    //   setTimeOfDay(state.timeOfDay);
+    //   setWeather(state.weather);
+    // });
+    // sceneDirector.startAutoTimeDetection();
+    // onCleanup(() => {
+    //   unsubScene();
+    //   sceneDirector.stopAutoTimeDetection();
+    // });
   });
   
   // Avatar 加载完成
@@ -521,12 +518,7 @@ function App() {
         position="top-right"
       />
       
-      {/* SOTA Round 40: 场景导演面板 */}
-      <Show when={showDevPanel()}>
-        <div class="scene-director-wrapper">
-          <SceneDirectorPanel />
-        </div>
-      </Show>
+      {/* 场景导演面板（花架子，禁用） */}
       
       {/* 截图录制功能暂时禁用 */}
     </main>
