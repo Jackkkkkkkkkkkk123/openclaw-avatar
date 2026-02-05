@@ -52,7 +52,6 @@ export interface AvatarSystemConfig {
   fishApiKey?: string;
   bridgeUrl?: string;       // OpenClaw Bridge URL
   useBridge?: boolean;      // 使用 Bridge 模式
-  sessionKey?: string;      // Session Key（自动根据环境选择）
   enableTTS?: boolean;
   enableLipSync?: boolean;
   enableEmotionDetection?: boolean;
@@ -143,20 +142,12 @@ export class AvatarSystem {
     console.log(`[AvatarSystem] Gateway URL: ${config.gatewayUrl ?? defaultGatewayUrl}`);
     console.log(`[AvatarSystem] Bridge URL: ${config.bridgeUrl ?? defaultBridgeUrl}`);
     
-    // 🎯 根据环境自动选择Session策略
-    const defaultSessionKey = isLocal 
-      ? 'agent:main:main'          // 本地：可用主session
-      : 'agent:main:avatar';       // 公网：必须分session
-    
-    console.log(`[AvatarSystem] Session策略: ${isLocal ? '本地主session' : '公网分session'} (${defaultSessionKey})`);
-    
     this.config = {
       gatewayUrl: config.gatewayUrl ?? defaultGatewayUrl,
       gatewayToken: config.gatewayToken ?? '',
       fishApiKey: config.fishApiKey ?? '',
       bridgeUrl: config.bridgeUrl ?? defaultBridgeUrl,
       useBridge: config.useBridge ?? true,
-      sessionKey: config.sessionKey ?? defaultSessionKey,
       enableTTS: config.enableTTS ?? true,
       enableLipSync: config.enableLipSync ?? true,
       enableEmotionDetection: config.enableEmotionDetection ?? true,
@@ -999,7 +990,10 @@ export class AvatarSystem {
   }
 
   /**
-   * 发送消息（支持独立session）
+   * 发送消息
+   */
+  /**
+   * 发送消息 - 修复版（支持独立session）
    */
   async sendMessage(text: string): Promise<boolean> {
     // 🎯 修复：使用配置中的sessionKey，确保独立session

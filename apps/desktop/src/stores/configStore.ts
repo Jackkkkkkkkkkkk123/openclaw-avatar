@@ -8,6 +8,7 @@ export interface AppConfig {
   fishApiKey: string;
   bridgeUrl: string;      // OpenClaw Bridge URL
   useBridge: boolean;     // 使用 Bridge 模式（更稳定）
+  sessionKey: string;     // 独立 session key（避免占用主 session）
   
   // 外观配置
   theme: 'dark' | 'light' | 'system';
@@ -32,6 +33,7 @@ const DEFAULT_CONFIG: AppConfig = {
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3', // 内置 API Key
   bridgeUrl: 'https://ws.sngxai.com',  // 公网 Bridge
   useBridge: false,  // Bridge 有 bug，暂时用 WebSocket
+  sessionKey: 'agent:main:avatar',  // 独立 session（不占用主 session）
   theme: 'dark',
   modelPath: '/live2d/001/0A-原档整理(1).model3.json',
   modelName: 'Lain',
@@ -39,9 +41,9 @@ const DEFAULT_CONFIG: AppConfig = {
   chatPosition: 'right',
   controlsExpanded: false,  // 默认收起
   showDevPanel: false,  // 默认关闭开发者面板
-  enableParticles: false,  // 粒子特效（花架子，禁用）
-  enableBackground: false,  // 动态背景（花架子，禁用）
-  enableLighting: false,  // 动态光照（花架子，禁用）
+  enableParticles: true,  // 粒子特效
+  enableBackground: true,  // 情绪驱动背景
+  enableLighting: true,  // 动态光照系统
 };
 
 const STORAGE_KEY = 'openclaw-avatar-config-v4'; // v4: 禁用 Bridge（有 bug）
@@ -52,6 +54,7 @@ const BUILTIN_CONFIG = {
   gatewayToken: 'b8fb14e82f2f29e7d81cb6853831be3ad9a6c0c0ddc07979',
   fishApiKey: 'ceea7f5420dc4214807f4ce5dccb9da3',
   bridgeUrl: 'https://ws.sngxai.com',  // 公网 Bridge
+  sessionKey: 'agent:main:avatar',  // 独立 session
 };
 
 // 从 localStorage 加载配置（连接配置始终使用内置值）

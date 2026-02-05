@@ -8,6 +8,8 @@
  * - 响应风格建议
  */
 
+import { config } from '../stores/configStore';
+
 // 延迟导入以避免在测试环境中的 localStorage 问题
 let _openClawConnector: any = null;
 let _connectorPromise: Promise<any> | null = null;
@@ -246,7 +248,8 @@ class LLMServiceImpl {
         : request.prompt;
       
       connector.sendMessage(message, {
-        thinkingLevel: 'off'
+        thinkingLevel: 'off',
+        sessionKey: config().sessionKey,  // 使用独立 session
       }).catch((e) => {
         clearTimeout(timeout);
         this.pendingCallbacks.delete(requestId);

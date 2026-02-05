@@ -14,14 +14,29 @@ export interface MessageChunk {
 export interface OpenClawConfig {
   gatewayUrl: string;
   token?: string;
+  /** 初始重连间隔 (ms)，默认 1000 */
   reconnectInterval?: number;
+  /** 最大重连次数，默认 20 */
   maxReconnectAttempts?: number;
+  /** 指数退避最大间隔 (ms)，默认 32000 */
+  maxReconnectDelay?: number;
 }
 
 type MessageHandler = (chunk: MessageChunk) => void;
 type StatusHandler = (status: ConnectionStatus) => void;
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
+
+export interface ReconnectInfo {
+  /** 当前重连次数 */
+  attempt: number;
+  /** 最大重连次数 */
+  maxAttempts: number;
+  /** 下次重连间隔 (ms) */
+  nextDelay: number;
+  /** 下次重连时间戳 */
+  nextRetryAt: number | null;
+}
 
 // 协议版本
 const PROTOCOL_VERSION = 3;
@@ -46,6 +61,7 @@ export class OpenClawConnector {
   private config: Required<OpenClawConfig>;
   private messageHandlers: Set<MessageHandler> = new Set();
   private statusHandlers: Set<StatusHandler> = new Set();
+  private reconnectInfoHandlers: Set<(info: ReconnectInfo) => void> = new Set();
   private status: ConnectionStatus = 'disconnected';
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -54,15 +70,18 @@ export class OpenClawConnector {
   private isConnected = false;
   private deviceToken: string | null = null;
   private challengeNonce: string | null = null;
+  private hadSuccessfulConnection = false;
+  private nextRetryAt: number | null = null;
 
   constructor(config: OpenClawConfig) {
     this.config = {
       gatewayUrl: config.gatewayUrl,
       token: config.token ?? '',
-      reconnectInterval: config.reconnectInterval ?? 3000,
-      maxReconnectAttempts: config.maxReconnectAttempts ?? 5,
+      reconnectInterval: config.reconnectInterval ?? 1000,
+      maxReconnectAttempts: config.maxReconnectAttempts ?? 20,
+      maxReconnectDelay: config.maxReconnectDelay ?? 32000,
     };
-    
+
     // 尝试从 localStorage 恢复 device token
     this.deviceToken = localStorage.getItem('openclaw-avatar-device-token');
   }
@@ -124,8 +143,11 @@ export class OpenClawConnector {
                 // 如果是 connect 响应成功
                 if (message.payload?.type === 'hello-ok') {
                   this.isConnected = true;
+                  this.hadSuccessfulConnection = true;
                   this.setStatus('connected');
                   this.reconnectAttempts = 0;
+                  this.nextRetryAt = null;
+                  this.notifyReconnectInfo();
                   console.log('[OpenClaw] ✅ 连接成功! 协议版本:', message.payload.protocol);
                   resolve();
                 }
@@ -173,12 +195,20 @@ export class OpenClawConnector {
 
         this.ws.onclose = (event) => {
           console.log('[OpenClaw] 连接关闭:', event.code, event.reason);
+          const wasConnected = this.isConnected;
           this.isConnected = false;
-          this.setStatus('disconnected');
-          
-          // 只有在之前成功连接过的情况下才尝试重连
+
+          // 正常关闭 (code 1000) 或从未成功连接过，不自动重连
+          if (event.code === 1000 || !this.hadSuccessfulConnection) {
+            this.setStatus('disconnected');
+            return;
+          }
+
+          // 尝试自动重连
           if (this.reconnectAttempts < this.config.maxReconnectAttempts) {
             this.attemptReconnect();
+          } else {
+            this.setStatus('error');
           }
         };
       } catch (e) {
@@ -204,13 +234,11 @@ export class OpenClawConnector {
         minProtocol: PROTOCOL_VERSION,
         maxProtocol: PROTOCOL_VERSION,
         client: {
-          id: 'openclaw-avatar',  // Avatar 专用客户端 ID
+          id: 'webchat',  // 使用 webchat 客户端 ID（Gateway 认可）
           version: '1.0.0',
           platform: typeof navigator !== 'undefined' ? navigator.platform || 'web' : 'web',
-          mode: 'avatar',  // avatar 模式
-          instanceId: `avatar-${getDeviceId()}`  // 唯一实例 ID
+          mode: 'webchat',  // 必需的 mode 属性
         },
-        role: 'viewer',  // 查看者角色
         scopes: ['chat', 'events'],  // 请求的权限
         caps: ['streaming'],  // 支持流式响应
         auth: {
@@ -241,15 +269,19 @@ export class OpenClawConnector {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
+    this.hadSuccessfulConnection = false; // 防止 onclose 触发自动重连
+
     if (this.ws) {
       this.ws.close(1000, 'User disconnect');
       this.ws = null;
     }
-    
+
     this.isConnected = false;
     this.setStatus('disconnected');
     this.reconnectAttempts = 0;
+    this.nextRetryAt = null;
+    this.notifyReconnectInfo();
   }
 
   /**
@@ -512,23 +544,105 @@ export class OpenClawConnector {
   }
 
   /**
-   * 尝试重连
+   * 计算指数退避延迟 (带 jitter)
+   */
+  private getBackoffDelay(): number {
+    // 指数退避: baseDelay * 2^(attempt-1)，加上随机 jitter
+    const exponentialDelay = this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
+    const cappedDelay = Math.min(exponentialDelay, this.config.maxReconnectDelay);
+    // 添加 ±20% 的随机 jitter 避免多客户端同时重连
+    const jitter = cappedDelay * (0.8 + Math.random() * 0.4);
+    return Math.round(jitter);
+  }
+
+  /**
+   * 尝试重连 (指数退避策略)
    */
   private attemptReconnect() {
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
       console.log('[OpenClaw] 达到最大重连次数，停止重连');
       this.setStatus('error');
+      this.nextRetryAt = null;
+      this.notifyReconnectInfo();
       return;
     }
 
     this.reconnectAttempts++;
-    console.log(`[OpenClaw] ${this.config.reconnectInterval}ms 后重连 (${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+    const delay = this.getBackoffDelay();
+    this.nextRetryAt = Date.now() + delay;
+
+    this.setStatus('reconnecting');
+    this.notifyReconnectInfo();
+
+    console.log(
+      `[OpenClaw] ${delay}ms 后重连 (${this.reconnectAttempts}/${this.config.maxReconnectAttempts})，` +
+      `退避延迟: ${(delay / 1000).toFixed(1)}s`
+    );
 
     this.reconnectTimer = setTimeout(() => {
+      this.nextRetryAt = null;
       this.connect().catch(e => {
         console.error('[OpenClaw] 重连失败:', e);
       });
-    }, this.config.reconnectInterval);
+    }, delay);
+  }
+
+  /**
+   * 手动触发重连 (重置计数器)
+   */
+  manualReconnect(): Promise<void> {
+    // 清除现有重连定时器
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
+    this.nextRetryAt = null;
+    this.hadSuccessfulConnection = true; // 允许自动重连
+    this.notifyReconnectInfo();
+
+    // 关闭现有连接
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+
+    return this.connect();
+  }
+
+  /**
+   * 获取重连信息
+   */
+  getReconnectInfo(): ReconnectInfo {
+    return {
+      attempt: this.reconnectAttempts,
+      maxAttempts: this.config.maxReconnectAttempts,
+      nextDelay: this.reconnectAttempts > 0 ? this.getBackoffDelay() : this.config.reconnectInterval,
+      nextRetryAt: this.nextRetryAt,
+    };
+  }
+
+  /**
+   * 订阅重连信息变化
+   */
+  onReconnectInfo(handler: (info: ReconnectInfo) => void): () => void {
+    this.reconnectInfoHandlers.add(handler);
+    handler(this.getReconnectInfo());
+    return () => this.reconnectInfoHandlers.delete(handler);
+  }
+
+  /**
+   * 通知重连信息变化
+   */
+  private notifyReconnectInfo() {
+    const info = this.getReconnectInfo();
+    this.reconnectInfoHandlers.forEach(handler => {
+      try {
+        handler(info);
+      } catch (e) {
+        console.error('[OpenClaw] 重连信息处理器错误:', e);
+      }
+    });
   }
 
   /**
